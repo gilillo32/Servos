@@ -11,4 +11,4 @@ class Servo:
         if angle < self.min_angle or angle > self.max_angle:
             raise ValueError(f"El ángulo debe estar entre {self.min_angle} y {self.max_angle}")
         else:
-            print(f"Servomotor {self.id}: {angle}")
+            print("Moving servo...")

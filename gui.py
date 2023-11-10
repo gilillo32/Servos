@@ -1,6 +1,8 @@
 import tkinter as tk
 import customtkinter as ctk
 
+import servo_collection
+
 
 class ServoControllerApp:
     def __init__(self, master):
@@ -18,10 +20,10 @@ class ServoControllerApp:
         self.servo_count_combobox.pack()
 
         self.sequence_entries = []
-        print(self.servo_count_var.get())
+        self.waiting_sequence_entry = []
         for i in range(int(self.servo_count_var.get())):
             self.create_servo_sequence_entry(i + 1)
-
+        self.create_waiting_sequence_entry()
         self.submit_button = tk.Button(master, text="Ejecutar", command=self.execute_sequence)
         self.submit_button.pack()
 
@@ -29,15 +31,28 @@ class ServoControllerApp:
         label = tk.Label(self.master, text=f"Secuencia para Servomotor {servo_number}:")
 
         entry = tk.Entry(self.master)
+        self.sequence_entries.append(entry)
         label.pack()
         entry.pack()
+
+    def create_waiting_sequence_entry(self):
+        waiting_sequence_label = tk.Label(self.master, text="Secuencia de Espera:")
+        waiting_sequence_entry = tk.Entry(self.master)
+        self.waiting_sequence_entry = waiting_sequence_entry
+        waiting_sequence_label.pack()
+        waiting_sequence_entry.pack()
 
     def execute_sequence(self):
         servo_count = int(self.servo_count_var.get())
 
         for i in range(servo_count):
             sequence = self.sequence_entries[i].get()
-            print(f"Servomotor {i + 1}: {sequence}")
+            sequence = list(map(int, sequence.split(",")))
+            servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(i)
+            servo.sequence = sequence
+        waiting_sequence = list(map(int, self.waiting_sequence_entry.get().split(",")))
+        servo_collection.ServoCollectionSingleton().set_waiting_sequence(waiting_sequence)
+        servo_collection.ServoCollectionSingleton().execute_sequence()
 
     def on_combobox_change(self, event):
         for widgets in self.master.winfo_children():
@@ -55,3 +70,5 @@ class ServoControllerApp:
                 entry.pack()
             else:
                 self.create_servo_sequence_entry(i + 1)
+
+        self.create_waiting_sequence_entry()
