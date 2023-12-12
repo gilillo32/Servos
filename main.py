@@ -1,8 +1,9 @@
 import customtkinter as ctk
 import pigpio
 
-from gui import ServoControllerApp
 from pwm import PWM
+from gui.gui import ServoControllerApp
+from gui.ventana_inicio import VentanaPrincipal
 from servo import Servo
 from servo_collection import ServoCollectionSingleton
 
@@ -22,18 +23,17 @@ def pi_init():
 
 
 if __name__ == "__main__":
-    pwm = pi_init()
-
+    # pwm = pi_init()
+    pwm = 0
     servo_1 = Servo(12, 0, 4, pwm)
     servo_2 = Servo(14, 1, 0, pwm)
 
-    servo_1.sequence = [12, 14, 15, 16, 17, 20]
-    servo_2.sequence = [20, 14, 26, 23, 5, 2]
     servo_collection = ServoCollectionSingleton()
     servo_collection.add_servo(servo_1)
     servo_collection.add_servo(servo_2)
     servo_collection.waiting_sequence = [10, 5, 5, 5, 5, 5]
 
     root = ctk.CTk()
-    app = ServoControllerApp(root)
+    root.geometry("500x100")
+    app = VentanaPrincipal(root)
     root.mainloop()

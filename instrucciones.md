@@ -1,0 +1,14 @@
+- Instala Python si no lo tienes instalado. Yo te recomiendo que instales la versión 3.8 o superior. Puedes descargarlo desde [aquí](https://www.python.org/downloads/).
+- Colócate con una terminal (CMD, PowerShell...) en el directorio raíz del proyecto (donde está el archivo `requirements.txt`).
+- Crea un entorno virtual de Python con el comando `python -m venv venv`.
+- Activa el entorno virtual con el comando `venv\Scripts\activate`.
+- Instala las dependencias con el comando `pip install -r requirements.txt`.
+- Ejecuta el programa con el comando `python main.py`.
+- Para desactivar el entorno virtual, ejecuta el comando `deactivate`.
+- Puedes ver los prints de la ejecución en la terminal en la que hayas ejecutado el programa.
+- Para que el programa no se rompa es importante meter las secuencias bien. Únicamente números y separados por coma. También es importante que todas las secuencias tengan el mismo número de elementos.
+- Ejemplo:
+  - 1,2,3,4,5,6
+  - 6,5,4,3,2,1
+  - 8,7,5,3,2,1
+- De momento no se puede jugar mucho con el programa (cambiar el número de servos en medio de la ejecución...), pero es un borrador. Si quieres jugar con el código, adelante.
