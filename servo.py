@@ -6,9 +6,9 @@ class Servo:
     max_angle = 180
     my_channel = -1
 
-    def __init__(self, pin, id, channel, pwm):
+    def __init__(self, pin, p_id, channel, pwm):
         self.pin = pin
-        self.id = id
+        self.id = p_id
         self.my_channel = channel
         self.pwm = pwm
         self.sequence = []
@@ -18,4 +18,4 @@ class Servo:
             raise ValueError(f"El ángulo debe estar entre {self.min_angle} y {self.max_angle}")
         else:
             print("Moving servo...")
-            self.pwm.set_pulse_width(self.my_channel, 500)
+            self.pwm.set_pulse_width(self.my_channel, angle)
