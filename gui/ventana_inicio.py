@@ -55,6 +55,8 @@ class VentanaPreparar:
         lbl_acumulado.pack(side=tk.BOTTOM)
         exportar_button = tk.Button(master, text="Exportar secuencia", command=self.exportar_secuencia)
         exportar_button.pack(side=tk.BOTTOM)
+        cargar_button = tk.Button(master, text="Cargar secuencia", command=self.cargar_secuencia)
+        cargar_button.pack(side=tk.BOTTOM)
         self.tabla.pack(expand=tk.YES, fill=tk.BOTH)
 
         # Botón para agregar fila
@@ -104,8 +106,31 @@ class VentanaPreparar:
 
                 # Escribe los datos de cada fila
                 for item in self.tabla.get_children():
-                    writer.writerow(self.tabla.item(item)["values"])
+                    writer.writerow([self.tabla.item(item)["text"]] + list(self.tabla.item(item)["values"]))
 
+    def cargar_secuencia(self):
+        # Abre el diálogo para seleccionar el archivo
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+
+        # Si el usuario selecciona un archivo
+        if file_path:
+            # Borra todas las filas existentes en la tabla
+            for item in self.tabla.get_children():
+                self.tabla.delete(item)
+
+            # Abre el archivo en modo lectura
+            with open(file_path, 'r') as file:
+                reader = csv.reader(file)
+
+                # Ignora la primera fila (encabezados de las columnas)
+                next(reader)
+
+                # Por cada fila en el archivo, inserta una nueva fila en la tabla
+                for row in reader:
+                    self.tabla.insert("", tk.END, text=row[0], values=row[1:])
+
+            # Actualiza el tiempo acumulado
+            self.actualizar_tiempo_acumulado()
 
     def on_double_click(self, event):
         item = self.tabla.identify('item', event.x, event.y)
