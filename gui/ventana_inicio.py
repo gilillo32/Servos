@@ -68,6 +68,7 @@ class VentanaPreparar:
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
+        self.actualizar_tiempo_acumulado()
 
     def eliminar_fila(self):
         selected_item = self.tabla.selection()[0]  # get selected item
@@ -79,6 +80,7 @@ class VentanaPreparar:
     def actualizar_tiempo_acumulado(self):
         total = 0
         for item in self.tabla.get_children():
+            self.tabla.set(item, "#4", total)
             total += self.tabla.item(item)["values"][2]
         self.texto_acumulado.set(f"Tiempo acumulado: {total}")
 
