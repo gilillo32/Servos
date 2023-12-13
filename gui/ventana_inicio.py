@@ -1,5 +1,6 @@
+import csv
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 
 
 class VentanaPrincipal:
@@ -35,7 +36,7 @@ class VentanaEjecutar:
 class VentanaPreparar:
     def __init__(self, master):
         self.master = master
-        master.title("Ventana Preparar")
+        master.title("Preparar secuencia")
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
                                                    "Tiempo acumulado (s)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
@@ -52,6 +53,8 @@ class VentanaPreparar:
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
         lbl_acumulado = tk.Label(master, textvariable=self.texto_acumulado)
         lbl_acumulado.pack(side=tk.BOTTOM)
+        exportar_button = tk.Button(master, text="Exportar secuencia", command=self.exportar_secuencia)
+        exportar_button.pack(side=tk.BOTTOM)
         self.tabla.pack(expand=tk.YES, fill=tk.BOTH)
 
         # Botón para agregar fila
@@ -82,7 +85,27 @@ class VentanaPreparar:
         for item in self.tabla.get_children():
             self.tabla.set(item, "#4", total)
             total += self.tabla.item(item)["values"][2]
-        self.texto_acumulado.set(f"Tiempo acumulado: {total}")
+        self.texto_acumulado.set(f"Tiempo total de la secuencia: {total}s")
+
+    # Exportar secuencia en formato csv dando la opción de elegir el nombre del archivo y la ubicación
+    def exportar_secuencia(self):
+        # Abre el diálogo para guardar el archivo
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+
+        # Si el usuario selecciona un archivo
+        if file_path:
+            # Abre el archivo en modo escritura
+            with open(file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+
+                # Escribe los encabezados de las columnas
+                writer.writerow(["Step", "Movimiento Servo 1", "Movimiento Servo 2", "Tiempo de espera (s)",
+                                 "Tiempo acumulado (s)"])
+
+                # Escribe los datos de cada fila
+                for item in self.tabla.get_children():
+                    writer.writerow(self.tabla.item(item)["values"])
+
 
     def on_double_click(self, event):
         item = self.tabla.identify('item', event.x, event.y)
@@ -94,6 +117,7 @@ class VentanaPreparar:
 
         entry = tk.Entry(self.master)
         entry.insert(0, value)
+        entry.select_range(0, tk.END)
         entry.place(x=event.x, y=event.y, anchor=tk.CENTER)
 
         def save_edit(event=None):
