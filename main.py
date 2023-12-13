@@ -2,7 +2,7 @@ import customtkinter as ctk
 import pigpio
 
 from pwm import PWM
-from gui.gui import ServoControllerApp
+
 from gui.ventana_inicio import VentanaPrincipal
 from servo import Servo
 from servo_collection import ServoCollectionSingleton
@@ -23,8 +23,8 @@ def pi_init():
 
 
 if __name__ == "__main__":
-    # pwm = pi_init()
     pwm = 0
+    # pwm = pi_init()
     servo_1 = Servo(12, 0, 4, pwm)
     servo_2 = Servo(14, 1, 0, pwm)
 
