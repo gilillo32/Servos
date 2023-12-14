@@ -1,3 +1,5 @@
+import os
+
 import customtkinter as ctk
 import pigpio
 
@@ -6,7 +8,6 @@ from pwm import PWM
 from gui.gui_manager import GUIManager
 from servo import Servo
 from servo_collection import ServoCollectionSingleton
-
 
 
 def pi_init():

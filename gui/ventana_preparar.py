@@ -12,6 +12,11 @@ from matplotlib import animation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
+MAIN_PATH = pathlib.Path(__file__).parent.parent.absolute()
+print(MAIN_PATH)
+SEQUENCE_DIR = os.path.join(MAIN_PATH, "SECUENCIAS")
+print(SEQUENCE_DIR)
+
 class VentanaPreparar:
     def __init__(self, master):
         self.master = master
@@ -90,10 +95,8 @@ class VentanaPreparar:
     # Exportar secuencia en formato csv dando la opción de elegir el nombre del archivo y la ubicación
     def exportar_secuencia(self):
         # Abre el diálogo para guardar el archivo
-        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-        # Check if file_path is SECUENCIAS folder
-        current_path = pathlib.Path(__file__).resolve()
-        # Si el usuario selecciona un archivo
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")],
+                                                 initialdir=SEQUENCE_DIR)
         if file_path:
             if not str(file_path).__contains__("/SECUENCIAS/"):
                 messagebox.showerror("Error", f"El archivo debe guardarse en la carpeta SECUENCIAS")
@@ -119,7 +122,7 @@ class VentanaPreparar:
                            self.tabla.get_children()]
         try:
             # Abre el diálogo para seleccionar el archivo
-            file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+            file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")], initialdir=SEQUENCE_DIR)
 
             # Si el usuario selecciona un archivo
             if file_path:
