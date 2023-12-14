@@ -1,6 +1,9 @@
 import csv
+import math
 import os
+import pathlib
 import tkinter as tk
+from time import sleep
 from tkinter import ttk, filedialog
 import tkinter.messagebox as messagebox
 import matplotlib.pyplot as plt
@@ -88,9 +91,13 @@ class VentanaPreparar:
     def exportar_secuencia(self):
         # Abre el diálogo para guardar el archivo
         file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-
+        # Check if file_path is SECUENCIAS folder
+        current_path = pathlib.Path(__file__).resolve()
         # Si el usuario selecciona un archivo
         if file_path:
+            if not str(file_path).__contains__("/SECUENCIAS/"):
+                messagebox.showerror("Error", f"El archivo debe guardarse en la carpeta SECUENCIAS")
+                return
             # Abre el archivo en modo escritura
             with open(file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
@@ -171,12 +178,51 @@ class VentanaPreparar:
         entry.focus_set()
 
     def simular_servos(self):
-        # Crear animación de un círculo por cada servomotor
+        # fig = self.plot_points((0, 0), 0, 1)
+        fig = plt.figure()
+        # Abrir la simulación en otra ventana
+        sim_window = tk.Toplevel(self.master)
+        sim_window.title("Simulación de servomotores")
+        sim_window.geometry("750x750")
+
+        # Read data from the table
+        data = []
+        for item in self.tabla.get_children():
+            data.append(self.tabla.item(item)["values"])
+
+        canvas = FigureCanvasTkAgg(fig, master=sim_window)
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=750, fargs=(data, fig),
+                                       repeat_delay=5000)
+
+        canvas.draw()
+
+    def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
+        '''
+        point - Tuple (x, y)
+        angle - Angle you want your end point at in degrees.
+        length - Length of the line you want to plot.
+
+        Will plot the line on a 10 x 10 plot.
+        '''
+
+        # unpack the first point
+        x_1, y_1 = point_1
+        x_2, y_2 = point_2
+
+        # find the end point
+        endy_1 = y_1 + length * math.sin(math.degrees(angle_1))
+        endx_1 = x_1 + length * math.cos(math.degrees(angle_1))
+
+        endy_2 = y_2 + length * math.sin(math.degrees(angle_2))
+        endx_2 = x_2 + length * math.cos(math.degrees(angle_2))
+
+        # plot the points
         fig = plt.figure()
         ax = plt.axes(xlim=(-1, 1), ylim=(-1, 1))
         ax.set_aspect('equal')
         ax.set_title("Simulación de servomotores")
-        ax.grid(True)
+        ax.grid(False)
         ax.set_xticks(np.arange(-1, 1.1, 0.1))
         ax.set_yticks(np.arange(-1, 1.1, 0.1))
         ax.set_xticklabels([])
@@ -188,24 +234,10 @@ class VentanaPreparar:
         ax.spines['left'].set_color('white')
         ax.tick_params(axis='x', colors='white')
         ax.tick_params(axis='y', colors='white')
-        # Estilos del círculo: solo perímetro dibujado, sin relleno
+        ax = plt.subplot(111)
+        ax.plot([x_1, endx_1], [y_1, endy_1])
 
-        servo_1_circle = plt.Circle((0, 0), 1)
-        servo_2_circle = plt.Circle((0, 1), 1)
-        # Crear línea de referencia para cada círculo
-        servo_1_line = ax.plot([], [], color='r')[0]
-        servo_2_line = ax.plot([], [], color='b')[0]
-        ax.add_patch(servo_1_circle)
-        ax.add_patch(servo_2_circle)
-        # Abrir la simulación en otra ventana
-        sim_window = tk.Toplevel(self.master)
-        sim_window.title("Simulación de servomotores")
-        sim_window.geometry("500x500")
-        # Crear ventana en la que se mostrarán los círculos
-        canvas = FigureCanvasTkAgg(fig, master=sim_window)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
+        return fig
 
     def on_closing(self):
         if self.master.title().endswith("*"):
@@ -213,6 +245,44 @@ class VentanaPreparar:
                 self.exportar_secuencia()
         self.master.destroy()
         self.master.master.destroy()
+
+
+def animate(i, data, fig):
+    # Create animation
+    ax = plt.subplot(111)
+    ax.clear()
+    ax.set_aspect('equal')
+    ax.set_title("Simulación de servomotores")
+    ax.grid(False)
+    ax.set_xticks(np.arange(-1, 1.1, 0.1))
+    ax.set_yticks(np.arange(-1, 1.1, 0.1))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_facecolor("black")
+    ax.spines['bottom'].set_color('white')
+    ax.spines['top'].set_color('white')
+    ax.spines['right'].set_color('white')
+    ax.spines['left'].set_color('white')
+    ax.tick_params(axis='x', colors='white')
+    ax.tick_params(axis='y', colors='white')
+    ax = plt.subplot(111)
+    # unpack the first point
+    x_1 = 0
+    y_1 = 0
+    x_2 = 0
+    y_2 = -1
+
+    # find the end point
+    endy_1 = y_1 + (-1) * np.sin(np.radians(data[i][0]))
+    endx_1 = x_1 + 1 * np.cos(np.radians(data[i][0]))
+    endy_2 = y_2 + 1 * np.sin(np.radians(data[i][1]))
+    endx_2 = x_2 + 1 * np.cos(np.radians(data[i][1]))
+    # Set plot limits
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-2, 2)
+    ax.plot([x_1, endx_1], [y_1, endy_1], color="red")
+    ax.plot([x_2, endx_2], [y_2, endy_2], color="blue")
+    return fig
 
 #   Backup execute_sequence
 #     def execute_sequence(self):
