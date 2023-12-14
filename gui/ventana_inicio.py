@@ -1,6 +1,8 @@
 import csv
+import os
 import tkinter as tk
 from tkinter import ttk, filedialog
+import tkinter.messagebox as messagebox
 
 
 class VentanaPrincipal:
@@ -17,7 +19,7 @@ class VentanaPrincipal:
     def abrir_ventana_ejecutar(self):
         self.master.withdraw()
         ventana_ejecutar = tk.Toplevel(self.master)
-        ventana_ejecutar.protocol("WM_DELETE_WINDOW", self.master.destroy)
+        ventana_ejecutar.protocol("WM_DELETE_WINDOW", self.master.on_closing)
         app_ejecutar = VentanaEjecutar(ventana_ejecutar)
 
     def abrir_ventana_preparar(self):
@@ -36,7 +38,8 @@ class VentanaEjecutar:
 class VentanaPreparar:
     def __init__(self, master):
         self.master = master
-        master.title("Preparar secuencia")
+        self.titulo = "Nueva secuencia"
+        self.master.title(self.titulo)
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
                                                    "Tiempo acumulado (s)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
@@ -45,7 +48,9 @@ class VentanaPreparar:
         self.tabla.heading("Tiempo de espera (s)", text="Tiempo de espera (s)")
         self.tabla.heading("Tiempo acumulado (s)", text="Tiempo acumulado (s)")
 
-        # Configurar etiquetas para centrar el texto
+        master.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Centrar la columna Step
         self.tabla.column("#0", anchor=tk.CENTER)
         for col in ("Servo 1", "Servo 2", "Tiempo de espera (s)", "Tiempo acumulado (s)"):
             self.tabla.column(col, anchor=tk.CENTER)
@@ -70,10 +75,13 @@ class VentanaPreparar:
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
         self.insertar_fila()
+        self.titulo = "Nueva secuencia"
+        self.master.title(self.titulo)
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
         self.actualizar_tiempo_acumulado()
+        self.marcar_cambios_no_guardados()
 
     def eliminar_fila(self):
         selected_item = self.tabla.selection()[0]  # get selected item
@@ -81,6 +89,8 @@ class VentanaPreparar:
         # Actualizar los números de step
         for i, item in enumerate(self.tabla.get_children()):
             self.tabla.item(item, text=str(i + 1))
+        self.actualizar_tiempo_acumulado()
+        self.marcar_cambios_no_guardados()
 
     def actualizar_tiempo_acumulado(self):
         total = 0
@@ -107,6 +117,9 @@ class VentanaPreparar:
                 # Escribe los datos de cada fila
                 for item in self.tabla.get_children():
                     writer.writerow([self.tabla.item(item)["text"]] + list(self.tabla.item(item)["values"]))
+            if self.titulo.endswith("*"):
+                self.titulo = self.titulo[:-1]
+            self.master.title(self.titulo)
 
     def cargar_secuencia(self):
         # Abre el diálogo para seleccionar el archivo
@@ -131,6 +144,13 @@ class VentanaPreparar:
 
             # Actualiza el tiempo acumulado
             self.actualizar_tiempo_acumulado()
+            self.titulo = os.path.basename(file_path)
+            self.master.title(self.titulo)
+
+    def marcar_cambios_no_guardados(self):
+        if not self.titulo.endswith("*"):
+            self.titulo += "*"
+            self.master.title(self.titulo)
 
     def on_double_click(self, event):
         item = self.tabla.identify('item', event.x, event.y)
@@ -153,3 +173,11 @@ class VentanaPreparar:
         entry.bind('<FocusOut>', save_edit)
         entry.bind('<Return>', save_edit)
         entry.focus_set()
+
+    def on_closing(self):
+        if self.master.title().endswith("*"):
+            if messagebox.askyesno("Guardar cambios", "Hay cambios sin guardar. ¿Desea guardarlos antes de salir?"):
+                self.exportar_secuencia()
+        self.master.destroy()
+        self.master.master.destroy()
+
