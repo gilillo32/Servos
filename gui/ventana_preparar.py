@@ -195,8 +195,8 @@ class VentanaPreparar:
 
         canvas = FigureCanvasTkAgg(fig, master=sim_window)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=750, fargs=(data, fig),
-                                       repeat_delay=5000)
+        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=400, fargs=(data, fig),
+                                       repeat_delay=3000)
 
         canvas.draw()
 
