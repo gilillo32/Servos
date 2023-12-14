@@ -18,6 +18,13 @@ class VentanaPreparar:
         self.tabla.heading("Tiempo de espera (s)", text="Tiempo de espera (s)")
         self.tabla.heading("Tiempo acumulado (s)", text="Tiempo acumulado (s)")
 
+        # Style
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=(None, 10, "bold"))
+        style.configure("Treeview",
+                        rowheight=20,
+                        font=(None, 10),
+                        )
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Centrar la columna Step
@@ -42,6 +49,7 @@ class VentanaPreparar:
         eliminar_button = tk.Button(master, text="Eliminar Fila", command=self.eliminar_fila)
         eliminar_button.pack()
 
+        self.tabla.bind("<<TreeviewSelect>>", self.update_row_colors)
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
         self.insertar_fila()
@@ -92,30 +100,41 @@ class VentanaPreparar:
             self.master.title(self.titulo)
 
     def cargar_secuencia(self):
-        # Abre el diálogo para seleccionar el archivo
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        # Guardar el estado actual de la tabla
+        filas_guardadas = [(self.tabla.item(item)["text"], self.tabla.item(item)["values"]) for item in
+                           self.tabla.get_children()]
+        try:
+            # Abre el diálogo para seleccionar el archivo
+            file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
 
-        # Si el usuario selecciona un archivo
-        if file_path:
-            # Borra todas las filas existentes en la tabla
+            # Si el usuario selecciona un archivo
+            if file_path:
+                # Borra todas las filas existentes en la tabla
+                for item in self.tabla.get_children():
+                    self.tabla.delete(item)
+                # Abre el archivo en modo lectura
+                with open(file_path, 'r') as file:
+                    reader = csv.reader(file)
+
+                    # Ignora la primera fila (encabezados de las columnas)
+                    next(reader)
+
+                    # Por cada fila en el archivo, inserta una nueva fila en la tabla
+                    for row in reader:
+                        self.tabla.insert("", tk.END, text=row[0], values=row[1:])
+
+                # Actualiza el tiempo acumulado y el título de la ventana
+                self.actualizar_tiempo_acumulado()
+                self.titulo = os.path.splitext(os.path.basename(file_path))[0]
+                self.master.title(self.titulo)
+        except Exception as e:
+            messagebox.showerror("Error", f"Archivo no válido")
+            # Restaurar el estado de la tabla
             for item in self.tabla.get_children():
                 self.tabla.delete(item)
-
-            # Abre el archivo en modo lectura
-            with open(file_path, 'r') as file:
-                reader = csv.reader(file)
-
-                # Ignora la primera fila (encabezados de las columnas)
-                next(reader)
-
-                # Por cada fila en el archivo, inserta una nueva fila en la tabla
-                for row in reader:
-                    self.tabla.insert("", tk.END, text=row[0], values=row[1:])
-
-            # Actualiza el tiempo acumulado
+            for fila in filas_guardadas:
+                self.tabla.insert("", tk.END, text=fila[0], values=fila[1])
             self.actualizar_tiempo_acumulado()
-            self.titulo = os.path.splitext(os.path.basename(file_path))[0]
-            self.master.title(self.titulo)
 
     def marcar_cambios_no_guardados(self):
         if not self.titulo.endswith("*"):
@@ -143,6 +162,14 @@ class VentanaPreparar:
         entry.bind('<FocusOut>', save_edit)
         entry.bind('<Return>', save_edit)
         entry.focus_set()
+
+    # Función para actualizar los colores de las filas después de cada cambio
+    def update_row_colors(self, event):
+        for i, item in enumerate(self.tabla.get_children()):
+            if i % 2 == 0:
+                self.tabla.item(item, tags=('evenrow',))
+            else:
+                self.tabla.item(item, tags=('oddrow',))
 
     def on_closing(self):
         if self.master.title().endswith("*"):

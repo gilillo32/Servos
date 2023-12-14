@@ -1,6 +1,6 @@
 import tkinter as tk
 
-from gui.ventana_inicio import VentanaPreparar
+from gui.ventana_preparar import VentanaPreparar
 
 
 class GUIManager:
