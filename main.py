@@ -3,7 +3,7 @@ import pigpio
 
 from pwm import PWM
 
-from gui.ventana_inicio import VentanaPrincipal
+from gui.gui_manager import GUIManager
 from servo import Servo
 from servo_collection import ServoCollectionSingleton
 
@@ -35,5 +35,5 @@ if __name__ == "__main__":
 
     root = ctk.CTk()
     root.geometry("500x100")
-    app = VentanaPrincipal(root)
+    app = GUIManager(root)
     root.mainloop()
