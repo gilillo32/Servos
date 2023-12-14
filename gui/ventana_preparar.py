@@ -3,6 +3,10 @@ import os
 import tkinter as tk
 from tkinter import ttk, filedialog
 import tkinter.messagebox as messagebox
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import animation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 class VentanaPreparar:
@@ -49,7 +53,10 @@ class VentanaPreparar:
         eliminar_button = tk.Button(master, text="Eliminar Fila", command=self.eliminar_fila)
         eliminar_button.pack()
 
-        self.tabla.bind("<<TreeviewSelect>>", self.update_row_colors)
+        # Botón para simular los servos
+        simular_button = tk.Button(master, text="Simular Servos", command=self.simular_servos)
+        simular_button.pack()
+
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
         self.insertar_fila()
@@ -163,13 +170,42 @@ class VentanaPreparar:
         entry.bind('<Return>', save_edit)
         entry.focus_set()
 
-    # Función para actualizar los colores de las filas después de cada cambio
-    def update_row_colors(self, event):
-        for i, item in enumerate(self.tabla.get_children()):
-            if i % 2 == 0:
-                self.tabla.item(item, tags=('evenrow',))
-            else:
-                self.tabla.item(item, tags=('oddrow',))
+    def simular_servos(self):
+        # Crear animación de un círculo por cada servomotor
+        fig = plt.figure()
+        ax = plt.axes(xlim=(-1, 1), ylim=(-1, 1))
+        ax.set_aspect('equal')
+        ax.set_title("Simulación de servomotores")
+        ax.grid(True)
+        ax.set_xticks(np.arange(-1, 1.1, 0.1))
+        ax.set_yticks(np.arange(-1, 1.1, 0.1))
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_facecolor("black")
+        ax.spines['bottom'].set_color('white')
+        ax.spines['top'].set_color('white')
+        ax.spines['right'].set_color('white')
+        ax.spines['left'].set_color('white')
+        ax.tick_params(axis='x', colors='white')
+        ax.tick_params(axis='y', colors='white')
+        # Estilos del círculo: solo perímetro dibujado, sin relleno
+
+        servo_1_circle = plt.Circle((0, 0), 1)
+        servo_2_circle = plt.Circle((0, 1), 1)
+        # Crear línea de referencia para cada círculo
+        servo_1_line = ax.plot([], [], color='r')[0]
+        servo_2_line = ax.plot([], [], color='b')[0]
+        ax.add_patch(servo_1_circle)
+        ax.add_patch(servo_2_circle)
+        # Abrir la simulación en otra ventana
+        sim_window = tk.Toplevel(self.master)
+        sim_window.title("Simulación de servomotores")
+        sim_window.geometry("500x500")
+        # Crear ventana en la que se mostrarán los círculos
+        canvas = FigureCanvasTkAgg(fig, master=sim_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
 
     def on_closing(self):
         if self.master.title().endswith("*"):
@@ -178,3 +214,15 @@ class VentanaPreparar:
         self.master.destroy()
         self.master.master.destroy()
 
+#   Backup execute_sequence
+#     def execute_sequence(self):
+#         servo_count = int(self.servo_count_var.get())
+#
+#         for i in range(servo_count):
+#             sequence = self.sequence_entries[i].get()
+#             sequence = list(map(int, sequence.split(",")))
+#             servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(i)
+#             servo.sequence = sequence
+#         waiting_sequence = list(map(int, self.waiting_sequence_entry.get().split(",")))
+#         servo_collection.ServoCollectionSingleton().set_waiting_sequence(waiting_sequence)
+#         servo_collection.ServoCollectionSingleton().execute_sequence()
