@@ -144,7 +144,7 @@ class VentanaPreparar:
 
             # Actualiza el tiempo acumulado
             self.actualizar_tiempo_acumulado()
-            self.titulo = os.path.basename(file_path)
+            self.titulo = os.path.splitext(os.path.basename(file_path))[0]
             self.master.title(self.titulo)
 
     def marcar_cambios_no_guardados(self):
