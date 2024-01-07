@@ -20,6 +20,9 @@ class ServoCollectionSingleton:
     def set_waiting_sequence(self, waiting_sequence):
         self._instance.waiting_sequence = waiting_sequence
 
+    def get_servos(self):
+        return self.servo_list
+
     def search_servo_by_id(self, p_id):
         for servo in self.servo_list:
             if servo.id == p_id:

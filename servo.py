@@ -12,6 +12,8 @@ class Servo:
         self.my_channel = channel
         self.pwm = pwm
         self.sequence = []
+        self.min_limit = -1
+        self.max_limit = -1
 
     def move(self, angle):
         if angle < self.min_angle or angle > self.max_angle:
