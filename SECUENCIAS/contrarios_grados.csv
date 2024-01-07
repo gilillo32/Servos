@@ -1,6 +1,0 @@
-Step,Movimiento Servo 1,Movimiento Servo 2,Tiempo de espera (s),Tiempo acumulado (s)
-1,0,180,2,0
-2,45,160,4,2
-3,90,120,2,6
-4,120,90,2,8
-5,180,0,2,10
