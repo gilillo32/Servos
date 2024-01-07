@@ -130,6 +130,8 @@ class VentanaPreparar:
                     writer.writerow([self.tabla.item(item)["text"]] + list(self.tabla.item(item)["values"]))
             if self.titulo.endswith("*"):
                 self.titulo = self.titulo[:-1]
+            # Set title as filename
+            self.titulo = os.path.splitext(os.path.basename(file_path))[0]
             self.master.title(self.titulo)
 
     def cargar_secuencia(self):
