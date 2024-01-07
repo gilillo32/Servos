@@ -3,7 +3,6 @@ import math
 import os
 import pathlib
 import tkinter as tk
-from time import sleep
 from tkinter import ttk, filedialog
 import tkinter.messagebox as messagebox
 import matplotlib.pyplot as plt
@@ -13,15 +12,17 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 MAIN_PATH = pathlib.Path(__file__).parent.parent.absolute()
-print(MAIN_PATH)
 SEQUENCE_DIR = os.path.join(MAIN_PATH, "SECUENCIAS")
-print(SEQUENCE_DIR)
 
 class VentanaPreparar:
     def __init__(self, master):
         self.master = master
         self.titulo = "Nueva secuencia"
         self.master.title(self.titulo)
+        self.frame1 = tk.Frame(self.master)
+        self.frame2 = tk.Frame(self.master)
+        self.frame3 = tk.Frame(self.master)
+        self.sim_frame = tk.Frame(self.master)
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
                                                    "Tiempo acumulado (s)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
@@ -46,24 +47,31 @@ class VentanaPreparar:
 
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
         lbl_acumulado = tk.Label(master, textvariable=self.texto_acumulado)
-        lbl_acumulado.pack(side=tk.BOTTOM)
-        exportar_button = tk.Button(master, text="Exportar secuencia", command=self.exportar_secuencia)
-        exportar_button.pack(side=tk.BOTTOM)
-        cargar_button = tk.Button(master, text="Cargar secuencia", command=self.cargar_secuencia)
-        cargar_button.pack(side=tk.BOTTOM)
-        self.tabla.pack(expand=tk.YES, fill=tk.BOTH)
+        lbl_acumulado.grid(row=1, column=0, columnspan=3)
+
+        # BOTONES
+        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia)
+        exportar_button.grid(row=1, column=0)
+        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia)
+        cargar_button.grid(row=0, column=0)
+        self.tabla.grid(row=0, column=0, columnspan=3, sticky='nsew')
 
         # Botón para agregar fila
-        agregar_button = tk.Button(master, text="Agregar Fila", command=self.insertar_fila)
-        agregar_button.pack()
+        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila)
+        agregar_button.grid(row=0, column=0)
 
         # Botón para eliminar fila
-        eliminar_button = tk.Button(master, text="Eliminar Fila", command=self.eliminar_fila)
-        eliminar_button.pack()
+        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila)
+        eliminar_button.grid(row=1, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(master, text="Simular Servos", command=self.simular_servos)
-        simular_button.pack()
+        simular_button = tk.Button(self.frame3, text="Simular Servos", command=self.simular_servos)
+        simular_button.grid(row=0, column=0)
+
+        self.frame1.grid(row=2, column=0)
+        self.frame2.grid(row=2, column=1)
+        self.frame3.grid(row=2, column=2)
+        self.sim_frame.grid(row=0, column=3, rowspan=3, sticky='nsew')
 
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
@@ -88,8 +96,8 @@ class VentanaPreparar:
     def actualizar_tiempo_acumulado(self):
         total = 0
         for item in self.tabla.get_children():
-            self.tabla.set(item, "#4", total)
             total += self.tabla.item(item)["values"][2]
+            self.tabla.set(item, "#4", total)
         self.texto_acumulado.set(f"Tiempo total de la secuencia: {total}s")
 
     # Exportar secuencia en formato csv dando la opción de elegir el nombre del archivo y la ubicación
@@ -174,6 +182,7 @@ class VentanaPreparar:
         def save_edit(event=None):
             self.tabla.set(item, column, entry.get())
             self.actualizar_tiempo_acumulado()
+            self.marcar_cambios_no_guardados()
             entry.destroy()
 
         entry.bind('<FocusOut>', save_edit)
@@ -182,20 +191,18 @@ class VentanaPreparar:
 
     def simular_servos(self):
         # fig = self.plot_points((0, 0), 0, 1)
+        for widget in self.sim_frame.winfo_children():
+            widget.destroy()
         fig = plt.figure()
-        # Abrir la simulación en otra ventana
-        sim_window = tk.Toplevel(self.master)
-        sim_window.title("Simulación de servomotores")
-        sim_window.geometry("750x750")
-
         # Read data from the table
         data = []
         for item in self.tabla.get_children():
             data.append(self.tabla.item(item)["values"])
 
-        canvas = FigureCanvasTkAgg(fig, master=sim_window)
+        canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=400, fargs=(data, fig),
+        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=400, fargs=(data, fig,
+                                                                                            self.master.title()),
                                        repeat_delay=3000)
 
         canvas.draw()
@@ -224,7 +231,8 @@ class VentanaPreparar:
         fig = plt.figure()
         ax = plt.axes(xlim=(-1, 1), ylim=(-1, 1))
         ax.set_aspect('equal')
-        ax.set_title("Simulación de servomotores")
+        # Set window title same as window title
+        ax.set_title(self.master.title())
         ax.grid(False)
         ax.set_xticks(np.arange(-1, 1.1, 0.1))
         ax.set_yticks(np.arange(-1, 1.1, 0.1))
@@ -250,12 +258,12 @@ class VentanaPreparar:
         self.master.master.destroy()
 
 
-def animate(i, data, fig):
+def animate(i, data, fig, title):
     # Create animation
     ax = plt.subplot(111)
     ax.clear()
     ax.set_aspect('equal')
-    ax.set_title("Simulación de servomotores")
+    ax.set_title(title)
     ax.grid(False)
     ax.set_xticks(np.arange(-1, 1.1, 0.1))
     ax.set_yticks(np.arange(-1, 1.1, 0.1))
