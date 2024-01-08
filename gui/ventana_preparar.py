@@ -87,6 +87,8 @@ class VentanaPreparar:
         self.titulo = "Nueva secuencia"
         self.master.title(self.titulo)
 
+        self.simular_servos()
+
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
         self.actualizar_tiempo_acumulado()
@@ -291,7 +293,6 @@ class VentanaPreparar:
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
         except ValueError:
             messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
-
 
 
     def simular_servos(self):
