@@ -211,7 +211,8 @@ class VentanaPreparar:
                     if servo.min_limit == -1 and servo.max_limit == -1:
                         messagebox.showerror("Error", f"No se han establecido los límites para el servomotor")
                     else:
-                        messagebox.showerror("Error", f"El ángulo debe estar entre {servo.min_limit} y {servo.max_limit}")
+                        messagebox.showerror("Error",
+                                             f"El ángulo debe estar entre {servo.min_limit} y {servo.max_limit}")
                     # Destroy entry
                     entry.destroy()
                     return
@@ -225,6 +226,38 @@ class VentanaPreparar:
         entry.focus_set()
 
     def set_limits(self):
+        def test_limit(which_limit):
+            servo_id = int(servo_combobox.get().split(" ")[1])
+            curr_servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
+            if curr_servo is None:
+                messagebox.showerror("Error", f"No se encontró el servo {servo_id}")
+                return
+            if min_limit_entry.get() == -1 and max_limit_entry.get() == -1:
+                messagebox.showerror("Error", f"No se han establecido los límites para el servomotor")
+                return
+
+            if min_limit_entry.get() == "" or max_limit_entry.get() == "":
+                messagebox.showerror("Error", f"Debe ingresar un valor para el límite")
+                return
+            try:
+                min_limit = int(min_limit_entry.get())
+                max_limit = int(max_limit_entry.get())
+                if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
+                    raise ValueError
+                limit = None
+                if which_limit == "min":
+                    limit = min_limit
+                elif which_limit == "max":
+                    limit = max_limit
+                if servo_id == 1:
+                    self.simular_servos(p_data=[[limit, 0, 0, 0]])
+                elif servo_id == 2:
+                    self.simular_servos(p_data=[[0, limit, 0, 0]])
+                # Request focus on limits_window
+                limits_window.after(100, lambda: limits_window.focus_force())
+
+            except ValueError:
+                messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
@@ -253,11 +286,10 @@ class VentanaPreparar:
         save_button.grid(row=3, column=0, columnspan=2)
 
         # Botón para probar los límites
-        min_limit_button = tk.Button(limits_window, text="Probar límite mínimo", command=self.test_limit)
+        min_limit_button = tk.Button(limits_window, text="Probar límite mínimo", command=lambda: test_limit("min"))
         min_limit_button.grid(row=4, column=0)
-        max_limit_button = tk.Button(limits_window, text="Probar límite máximo", command=self.test_limit)
+        max_limit_button = tk.Button(limits_window, text="Probar límite máximo", command=lambda: test_limit("max"))
         max_limit_button.grid(row=4, column=1)
-
 
         def on_servo_selected(event):
             current_servo_id = int(servo_combobox.get().split(" ")[1])
@@ -272,10 +304,6 @@ class VentanaPreparar:
 
         on_servo_selected(None)
         servo_combobox.bind("<<ComboboxSelected>>", on_servo_selected)
-
-    def test_limit(self):
-        # TODO
-        pass
 
     def save_limits(self, servo_combobox, min_limit_entry, max_limit_entry):
         servo_id = int(servo_combobox.get().split(" ")[1])
@@ -294,8 +322,7 @@ class VentanaPreparar:
         except ValueError:
             messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
 
-
-    def simular_servos(self):
+    def simular_servos(self, p_data=None):
         # fig = self.plot_points((0, 0), 0, 1)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
@@ -304,7 +331,8 @@ class VentanaPreparar:
         data = []
         for item in self.tabla.get_children():
             data.append(self.tabla.item(item)["values"])
-
+        if p_data is not None:
+            data = p_data
         canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=400, fargs=(data, fig,
