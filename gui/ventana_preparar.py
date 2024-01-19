@@ -87,6 +87,16 @@ class VentanaPreparar:
                                     anchor='center')
         shutdown_button.grid(row=1, column=0)
 
+        # Servo limits tag
+        self.servo_1_limits_tag = tk.StringVar()
+        self.servo_2_limits_tag = tk.StringVar()
+
+        servo_1_limits_label = tk.Label(self.frame3, textvariable=self.servo_1_limits_tag)
+        servo_1_limits_label.grid(row=1, column=0)
+        servo_2_limits_label = tk.Label(self.frame3, textvariable=self.servo_2_limits_tag)
+        servo_2_limits_label.grid(row=2, column=0)
+
+
         self.frame1.grid(row=2, column=0)
         self.frame2.grid(row=2, column=1)
         self.frame3.grid(row=2, column=2)
@@ -332,6 +342,10 @@ class VentanaPreparar:
             servo.min_limit = min_limit
             servo.max_limit = max_limit
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
+            if servo.id == 1:
+                self.servo_1_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+            elif servo.id == 2:
+                self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
         except ValueError:
             messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
 
@@ -348,11 +362,14 @@ class VentanaPreparar:
             data = p_data
         canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL, length=200, mode='determinate',
+                                   maximum=len(data))
+        progress.pack(side=tk.BOTTOM, fill=tk.X)
         anim = animation.FuncAnimation(fig,
                                        animate,
                                        frames=len(data),
                                        interval=400,
-                                       fargs=(data, fig, self.master.title(), self.tabla),
+                                       fargs=(data, fig, self.master.title(), self.tabla, progress),
                                        repeat_delay=3000
                                        )
 
@@ -411,7 +428,7 @@ class VentanaPreparar:
         exit()
 
 
-def animate(i, data, fig, title, table):
+def animate(i, data, fig, title, table, progress):
     # Create animation
     ax = plt.subplot(111)
     ax.clear()
@@ -450,6 +467,7 @@ def animate(i, data, fig, title, table):
     # Visualize in table
     table.selection_clear()
     table.selection_set(table.get_children()[i])
+    progress['value'] = i + 1
     return fig
 
 #   Backup execute_sequence
