@@ -55,25 +55,37 @@ class VentanaPreparar:
 
         # BOTONES
         # Botón para agregar fila
-        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila)
+        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila, width=15, height=2,
+                                   anchor='center')
         agregar_button.grid(row=0, column=0)
 
         # Botón para eliminar fila
-        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila)
+        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila, width=15, height=2,
+                                    anchor='center')
         eliminar_button.grid(row=1, column=0)
 
-        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia)
+        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia, width=15,
+                                    height=2, anchor='center')
         exportar_button.grid(row=1, column=0)
-        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia)
+        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=15,
+                                  height=2, anchor='center')
         cargar_button.grid(row=0, column=0)
         self.tabla.grid(row=0, column=0, columnspan=4, sticky='nsew')
 
-        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits)
+        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=15, height=2,
+                                  anchor='center')
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos)
+        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=15, height=2,
+                                   anchor='center')
         simular_button.grid(row=0, column=0)
+
+        # Botón para apagar la Raspberry Pi
+        shutdown_button = tk.Button(self.frame4, text="Apagar Raspberry Pi",
+                                    command=lambda: os.system("sudo shutdown -h now"), width=15, height=2,
+                                    anchor='center')
+        shutdown_button.grid(row=1, column=0)
 
         self.frame1.grid(row=2, column=0)
         self.frame2.grid(row=2, column=1)
@@ -258,6 +270,7 @@ class VentanaPreparar:
 
             except ValueError:
                 messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
+
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
@@ -335,20 +348,24 @@ class VentanaPreparar:
             data = p_data
         canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        anim = animation.FuncAnimation(fig, animate, frames=len(data), interval=400, fargs=(data, fig,
-                                                                                            self.master.title()),
-                                       repeat_delay=3000)
+        anim = animation.FuncAnimation(fig,
+                                       animate,
+                                       frames=len(data),
+                                       interval=400,
+                                       fargs=(data, fig, self.master.title(), self.tabla),
+                                       repeat_delay=3000
+                                       )
 
         canvas.draw()
 
     def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
-        '''
+        """
         point - Tuple (x, y)
         angle - Angle you want your end point at in degrees.
         length - Length of the line you want to plot.
 
         Will plot the line on a 10 x 10 plot.
-        '''
+        """
 
         # unpack the first point
         x_1, y_1 = point_1
@@ -386,13 +403,15 @@ class VentanaPreparar:
 
     def on_closing(self):
         if self.master.title().endswith("*"):
-            if messagebox.askyesno("Guardar cambios", "Hay cambios sin guardar. ¿Desea guardarlos antes de salir?"):
+            if messagebox.askyesno("Guardar cambios",
+                                   "Hay cambios sin guardar. ¿Desea guardarlos antes de salir?"):
                 self.exportar_secuencia()
         self.master.destroy()
         self.master.master.destroy()
+        exit()
 
 
-def animate(i, data, fig, title):
+def animate(i, data, fig, title, table):
     # Create animation
     ax = plt.subplot(111)
     ax.clear()
@@ -427,6 +446,10 @@ def animate(i, data, fig, title):
     ax.set_ylim(-2, 2)
     ax.plot([x_1, endx_1], [y_1, endy_1], color="red")
     ax.plot([x_2, endx_2], [y_2, endy_2], color="blue")
+
+    # Visualize in table
+    table.selection_clear()
+    table.selection_set(table.get_children()[i])
     return fig
 
 #   Backup execute_sequence
