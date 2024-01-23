@@ -18,7 +18,10 @@ SEQUENCE_DIR = os.path.join(MAIN_PATH, "SECUENCIAS")
 
 class VentanaPreparar:
     def __init__(self, master):
+        self.simulation_status_label = None
+        self.simulation_status = None
         self.save_edit_called = None
+        self.simulation_paused = False
         self.master = master
         self.titulo = "Nueva secuencia"
         self.master.title(self.titulo)
@@ -55,37 +58,42 @@ class VentanaPreparar:
 
         # BOTONES
         # Botón para agregar fila
-        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila, width=15, height=2,
+        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila, width=30, height=2,
                                    anchor='center')
         agregar_button.grid(row=0, column=0)
 
         # Botón para eliminar fila
-        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila, width=15, height=2,
+        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila, width=30, height=2,
                                     anchor='center')
         eliminar_button.grid(row=1, column=0)
 
-        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia, width=15,
+        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia, width=30,
                                     height=2, anchor='center')
         exportar_button.grid(row=1, column=0)
-        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=15,
+        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=30,
                                   height=2, anchor='center')
         cargar_button.grid(row=0, column=0)
         self.tabla.grid(row=0, column=0, columnspan=4, sticky='nsew')
 
-        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=15, height=2,
+        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=30, height=2,
                                   anchor='center')
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=15, height=2,
+        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=30, height=2,
                                    anchor='center')
         simular_button.grid(row=0, column=0)
 
         # Botón para apagar la Raspberry Pi
         shutdown_button = tk.Button(self.frame4, text="Apagar Raspberry Pi",
-                                    command=lambda: os.system("sudo shutdown -h now"), width=15, height=2,
+                                    command=lambda: os.system("sudo shutdown -h now"), width=30, height=2,
                                     anchor='center')
         shutdown_button.grid(row=1, column=0)
+
+        # Pausar/continuar simulación
+        pause_resume_button = tk.Button(self.frame4, text="Pausar/Reanudar simulación",
+                                        command=self.pause_resume_simulation, width=30, height=2, anchor='center')
+        pause_resume_button.grid(row=2, column=0)
 
         # Servo limits tag
         self.servo_1_limits_tag = tk.StringVar()
@@ -110,6 +118,7 @@ class VentanaPreparar:
         self.master.title(self.titulo)
 
         self.simular_servos()
+        self.pause_resume_simulation()
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
@@ -200,6 +209,10 @@ class VentanaPreparar:
             self.titulo += "*"
             self.master.title(self.titulo)
 
+    def pause_resume_simulation(self):
+        self.simulation_paused = not self.simulation_paused
+        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+
     def on_double_click(self, event):
         self.save_edit_called = False
         item = self.tabla.identify('item', event.x, event.y)
@@ -284,14 +297,14 @@ class VentanaPreparar:
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
-        limits_window.geometry("300x200")
+        limits_window.geometry("260x300")
         # Desplegable con la lista de servos
         servo_id_list = []
         servo_list = servo_collection.ServoCollectionSingleton().get_servos()
         for servo in servo_list:
             servo_id_list.append("Servo " + str(servo.id))
         servo_combobox = ttk.Combobox(limits_window, values=servo_id_list)
-        servo_combobox.grid(row=0, column=0, columnspan=2)
+        servo_combobox.grid(row=0, column=0, columnspan=2, pady=20)
         if servo_id_list:
             servo_combobox.set(servo_id_list[0])
         min_limit_label = tk.Label(limits_window, text="Límite mínimo")
@@ -299,9 +312,9 @@ class VentanaPreparar:
         max_limit_label = tk.Label(limits_window, text="Límite máximo")
         max_limit_label.grid(row=1, column=1)
         min_limit_entry = tk.Entry(limits_window)
-        min_limit_entry.grid(row=2, column=0)
+        min_limit_entry.grid(row=2, column=0, pady=20)
         max_limit_entry = tk.Entry(limits_window)
-        max_limit_entry.grid(row=2, column=1)
+        max_limit_entry.grid(row=2, column=1, pady=20)
         # Botón para guardar los límites
         save_button = tk.Button(limits_window, text="Guardar", command=lambda: self.save_limits(servo_combobox,
                                                                                                 min_limit_entry,
@@ -310,9 +323,9 @@ class VentanaPreparar:
 
         # Botón para probar los límites
         min_limit_button = tk.Button(limits_window, text="Probar límite mínimo", command=lambda: test_limit("min"))
-        min_limit_button.grid(row=4, column=0)
+        min_limit_button.grid(row=4, column=0, pady=20)
         max_limit_button = tk.Button(limits_window, text="Probar límite máximo", command=lambda: test_limit("max"))
-        max_limit_button.grid(row=4, column=1)
+        max_limit_button.grid(row=4, column=1, pady=20)
 
         def on_servo_selected(event):
             current_servo_id = int(servo_combobox.get().split(" ")[1])
@@ -350,6 +363,7 @@ class VentanaPreparar:
             messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
 
     def simular_servos(self, p_data=None):
+        self.simulation_paused = False
         # fig = self.plot_points((0, 0), 0, 1)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
@@ -365,11 +379,15 @@ class VentanaPreparar:
         progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL, length=200, mode='determinate',
                                    maximum=len(data))
         progress.pack(side=tk.BOTTOM, fill=tk.X)
+        self.simulation_status = tk.StringVar()
+        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+        self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
+        self.simulation_status_label.pack(side=tk.BOTTOM)
         anim = animation.FuncAnimation(fig,
                                        animate,
                                        frames=len(data),
                                        interval=400,
-                                       fargs=(data, fig, self.master.title(), self.tabla, progress),
+                                       fargs=(data, fig, self.master.title(), self.tabla, progress, self),
                                        repeat_delay=3000
                                        )
 
@@ -428,7 +446,9 @@ class VentanaPreparar:
         exit()
 
 
-def animate(i, data, fig, title, table, progress):
+def animate(i, data, fig, title, table, progress, ventana_preparar):
+    if ventana_preparar.simulation_paused:
+        return fig
     # Create animation
     ax = plt.subplot(111)
     ax.clear()
@@ -468,6 +488,7 @@ def animate(i, data, fig, title, table, progress):
     table.selection_clear()
     table.selection_set(table.get_children()[i])
     progress['value'] = i + 1
+    i += 1
     return fig
 
 #   Backup execute_sequence
