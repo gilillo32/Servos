@@ -1,4 +1,4 @@
-import os
+import argparse
 
 import customtkinter as ctk
 import pigpio
@@ -26,9 +26,14 @@ def pi_init():
 
 if __name__ == "__main__":
     pwm = 0
-    # pwm = pi_init()
-    servo_1 = Servo(12, 1, 4, pwm)
-    servo_2 = Servo(14, 2, 0, pwm)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r', '--rasp', type=bool, default=False, help='Run on Raspberry Pi')
+    args = parser.parse_args()
+    rasp = args.rasp
+    if rasp:
+        pwm = pi_init()
+    servo_1 = Servo(12, 1, 4, pwm, rasp)
+    servo_2 = Servo(14, 2, 0, pwm, rasp)
 
     servo_collection = ServoCollectionSingleton()
     servo_collection.add_servo(servo_1)
