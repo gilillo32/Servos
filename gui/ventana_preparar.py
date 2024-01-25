@@ -288,6 +288,7 @@ class VentanaPreparar:
                     self.simular_servos(p_data=[[limit, 0, 0, 0]])
                 elif servo_id == 2:
                     self.simular_servos(p_data=[[0, limit, 0, 0]])
+                curr_servo.move(limit)
                 # Request focus on limits_window
                 limits_window.after(100, lambda: limits_window.focus_force())
 
