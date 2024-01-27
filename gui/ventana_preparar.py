@@ -119,6 +119,14 @@ class VentanaPreparar:
 
         self.simular_servos()
         self.pause_resume_simulation()
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+
+        window_width = int(screen_width * 0.8)
+        window_height = int(screen_height * 0.8)
+
+        self.master.geometry(f"{window_width}x{window_height}")
+
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
