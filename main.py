@@ -32,8 +32,8 @@ if __name__ == "__main__":
     rasp = args.rasp
     if rasp:
         pwm = pi_init()
-    servo_1 = Servo(12, 1, 4, pwm, rasp)
-    servo_2 = Servo(14, 2, 0, pwm, rasp)
+    servo_1 = Servo(12, 1, 0, pwm, rasp)
+    servo_2 = Servo(14, 2, 4, pwm, rasp)
 
     servo_collection = ServoCollectionSingleton()
     servo_collection.add_servo(servo_1)
