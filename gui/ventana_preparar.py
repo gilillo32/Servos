@@ -285,8 +285,8 @@ class VentanaPreparar:
             try:
                 min_limit = int(min_limit_entry.get())
                 max_limit = int(max_limit_entry.get())
-                if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
-                    raise ValueError
+                # if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
+                #     raise ValueError
                 limit = None
                 if which_limit == "min":
                     limit = min_limit
@@ -359,8 +359,8 @@ class VentanaPreparar:
         try:
             min_limit = int(min_limit_entry.get())
             max_limit = int(max_limit_entry.get())
-            if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
-                raise ValueError
+            # if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
+            #     raise ValueError
             servo.min_limit = min_limit
             servo.max_limit = max_limit
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
