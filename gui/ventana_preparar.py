@@ -498,6 +498,14 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     table.selection_set(table.get_children()[i])
     progress['value'] = i + 1
     i += 1
+
+    servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
+    servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
+    servo_1.move(data[i][0])
+    servo_2.move(data[i][1])
+    print(f"Moving servo 1 to {data[i][0]} degrees...")
+    print(f"Moving servo 2 to {data[i][1]} degrees...")
+
     return fig
 
 #   Backup execute_sequence
