@@ -151,7 +151,6 @@ if __name__ == "__main__":
 
     import time
 
-    import PCA9685
     import pigpio
 
     pi = pigpio.pi()

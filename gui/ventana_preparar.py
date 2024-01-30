@@ -502,7 +502,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
     servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
     servo_1.move(data[i - 1][0])
-    servo_2.move(data[i -1][1])
+    servo_2.move(data[i - 1][1])
     print(f"Moving servo 1 to {data[i - 1][0]} degrees...")
     print(f"Moving servo 2 to {data[i -1 ][1]} degrees...")
 
