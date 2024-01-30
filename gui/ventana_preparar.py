@@ -33,10 +33,10 @@ class VentanaPreparar:
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
                                                    "Tiempo acumulado (s)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
-        self.tabla.heading("Servo 1", text="Movimiento Servo 1")
-        self.tabla.heading("Servo 2", text="Movimiento Servo 2")
-        self.tabla.heading("Tiempo de espera (s)", text="Tiempo de espera (s)")
-        self.tabla.heading("Tiempo acumulado (s)", text="Tiempo acumulado (s)")
+        self.tabla.heading("Servo 1", text="Posición Servo 1", anchor=tk.CENTER)
+        self.tabla.heading("Servo 2", text="Posición Servo 2", anchor=tk.CENTER)
+        self.tabla.heading("Tiempo de espera (s)", text="Tiempo de espera (s)", anchor=tk.CENTER)
+        self.tabla.heading("Tiempo acumulado (s)", text="Tiempo acumulado (s)", anchor=tk.CENTER)
 
         # Style
         style = ttk.Style()
@@ -48,9 +48,9 @@ class VentanaPreparar:
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Centrar la columna Step
-        self.tabla.column("#0", anchor=tk.CENTER)
+        self.tabla.column("#0", anchor=tk.CENTER, width=25)
         for col in ("Servo 1", "Servo 2", "Tiempo de espera (s)", "Tiempo acumulado (s)"):
-            self.tabla.column(col, anchor=tk.CENTER)
+            self.tabla.column(col, anchor=tk.CENTER, width=25)
 
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
         lbl_acumulado = tk.Label(master, textvariable=self.texto_acumulado)
@@ -58,41 +58,41 @@ class VentanaPreparar:
 
         # BOTONES
         # Botón para agregar fila
-        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila, width=30, height=2,
+        agregar_button = tk.Button(self.frame1, text="Agregar Fila", command=self.insertar_fila, width=25, height=2,
                                    anchor='center')
         agregar_button.grid(row=0, column=0)
 
         # Botón para eliminar fila
-        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila, width=30, height=2,
+        eliminar_button = tk.Button(self.frame1, text="Eliminar Fila", command=self.eliminar_fila, width=25, height=2,
                                     anchor='center')
         eliminar_button.grid(row=1, column=0)
 
-        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia, width=30,
+        exportar_button = tk.Button(self.frame2, text="Exportar secuencia", command=self.exportar_secuencia, width=25,
                                     height=2, anchor='center')
         exportar_button.grid(row=1, column=0)
-        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=30,
+        cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=25,
                                   height=2, anchor='center')
         cargar_button.grid(row=0, column=0)
         self.tabla.grid(row=0, column=0, columnspan=4, sticky='nsew')
 
-        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=30, height=2,
+        limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=25, height=2,
                                   anchor='center')
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=30, height=2,
+        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=25, height=2,
                                    anchor='center')
         simular_button.grid(row=0, column=0)
 
         # Botón para apagar la Raspberry Pi
-        shutdown_button = tk.Button(self.frame4, text="Apagar Raspberry Pi",
-                                    command=lambda: os.system("sudo shutdown -h now"), width=30, height=2,
+        shutdown_button = tk.Button(self.frame4, text="Cerrar aplicación",
+                                    command=lambda: os.system("sudo shutdown -h now"), width=25, height=2,
                                     anchor='center')
         shutdown_button.grid(row=1, column=0)
 
         # Pausar/continuar simulación
         pause_resume_button = tk.Button(self.frame4, text="Pausar/Reanudar simulación",
-                                        command=self.pause_resume_simulation, width=30, height=2, anchor='center')
+                                        command=self.pause_resume_simulation, width=25, height=2, anchor='center')
         pause_resume_button.grid(row=2, column=0)
 
         # Servo limits tag
@@ -103,7 +103,6 @@ class VentanaPreparar:
         servo_1_limits_label.grid(row=1, column=0)
         servo_2_limits_label = tk.Label(self.frame3, textvariable=self.servo_2_limits_tag)
         servo_2_limits_label.grid(row=2, column=0)
-
 
         self.frame1.grid(row=2, column=0)
         self.frame2.grid(row=2, column=1)
@@ -119,13 +118,6 @@ class VentanaPreparar:
 
         self.simular_servos()
         self.pause_resume_simulation()
-        screen_width = self.master.winfo_screenwidth()
-        screen_height = self.master.winfo_screenheight()
-
-        window_width = int(screen_width * 0.8)
-        window_height = int(screen_height * 0.8)
-
-        self.master.geometry(f"{window_width}x{window_height}")
 
 
     def insertar_fila(self):
@@ -376,7 +368,7 @@ class VentanaPreparar:
         # fig = self.plot_points((0, 0), 0, 1)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
-        fig = plt.figure()
+        fig = plt.figure(figsize=(2, 2))
         # Read data from the table
         data = []
         for item in self.tabla.get_children():
