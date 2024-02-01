@@ -199,20 +199,39 @@ class VentanaPreparar:
 
                     # Por cada fila en el archivo, inserta una nueva fila en la tabla
                     for row in reader:
+                        servo1_angle = int(row[1])
+                        servo2_angle = int(row[2])
+
+                        # Obtén los servos de la colección de servos
+                        servo1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
+                        servo2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
+
+                        # Verifica que los ángulos estén dentro de los límites de los servos
+                        if not (servo1.min_limit <= servo1_angle <= servo1.max_limit or
+                                servo2.min_limit <= servo2_angle <= servo2.max_limit):
+                            raise ValueError
                         self.tabla.insert("", tk.END, text=row[0], values=row[1:])
 
                 # Actualiza el tiempo acumulado y el título de la ventana
                 self.actualizar_tiempo_acumulado()
                 self.titulo = os.path.splitext(os.path.basename(file_path))[0]
                 self.master.title(self.titulo)
-        except Exception as e:
-            messagebox.showerror("Error", f"Archivo no válido")
+        except ValueError:
             # Restaurar el estado de la tabla
             for item in self.tabla.get_children():
                 self.tabla.delete(item)
             for fila in filas_guardadas:
                 self.tabla.insert("", tk.END, text=fila[0], values=fila[1])
             self.actualizar_tiempo_acumulado()
+            messagebox.showerror("Error", f"El archivo contiene ángulos fuera de los límites de los servos")
+        except Exception as e:
+            # Restaurar el estado de la tabla
+            for item in self.tabla.get_children():
+                self.tabla.delete(item)
+            for fila in filas_guardadas:
+                self.tabla.insert("", tk.END, text=fila[0], values=fila[1])
+            self.actualizar_tiempo_acumulado()
+            messagebox.showerror("Error", f"Archivo no válido")
 
     def marcar_cambios_no_guardados(self):
         if not self.titulo.endswith("*"):
@@ -361,8 +380,8 @@ class VentanaPreparar:
         try:
             min_limit = int(min_limit_entry.get())
             max_limit = int(max_limit_entry.get())
-            # if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
-            #     raise ValueError
+            if min_limit > max_limit:
+                raise ValueError
             servo.min_limit = min_limit
             servo.max_limit = max_limit
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
@@ -371,7 +390,7 @@ class VentanaPreparar:
             elif servo.id == 2:
                 self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
         except ValueError:
-            messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
+            messagebox.showerror("Error", f"El límite mínimo debe ser inferior al máximo")
 
     def simular_servos(self, p_data=None):
         self.simulation_paused = False
