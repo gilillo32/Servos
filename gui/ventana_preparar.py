@@ -29,6 +29,7 @@ class VentanaPreparar:
         self.frame2 = tk.Frame(self.master)
         self.frame3 = tk.Frame(self.master)
         self.frame4 = tk.Frame(self.master)
+        self.frame_exit = tk.Frame(self.master)
         self.sim_frame = tk.Frame(self.master)
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
                                                    "Tiempo acumulado (s)"), selectmode="browse", )
@@ -48,9 +49,9 @@ class VentanaPreparar:
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Centrar la columna Step
-        self.tabla.column("#0", anchor=tk.CENTER, width=25)
+        self.tabla.column("#0", anchor=tk.CENTER, width=2)
         for col in ("Servo 1", "Servo 2", "Tiempo de espera (s)", "Tiempo acumulado (s)"):
-            self.tabla.column(col, anchor=tk.CENTER, width=25)
+            self.tabla.column(col, anchor=tk.CENTER, width=45)
 
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
         lbl_acumulado = tk.Label(master, textvariable=self.texto_acumulado)
@@ -73,22 +74,31 @@ class VentanaPreparar:
         cargar_button = tk.Button(self.frame2, text="Cargar secuencia", command=self.cargar_secuencia, width=25,
                                   height=2, anchor='center')
         cargar_button.grid(row=0, column=0)
+
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(self.master, orient="vertical", command=self.tabla.yview)
+
+        self.tabla.configure(yscrollcommand=scrollbar.set)
+
         self.tabla.grid(row=0, column=0, columnspan=4, sticky='nsew')
+
+        scrollbar.grid(row=0, column=4, sticky='ns')
 
         limits_button = tk.Button(self.frame3, text="Marcar/Ver límites", command=self.set_limits, width=25, height=2,
                                   anchor='center')
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular Servos", command=self.simular_servos, width=25, height=2,
+        simular_button = tk.Button(self.frame4, text="Simular movimiento", command=self.simular_servos, width=25,
+                                   height=2,
                                    anchor='center')
         simular_button.grid(row=0, column=0)
 
-        # Botón para apagar la Raspberry Pi
-        shutdown_button = tk.Button(self.frame4, text="Cerrar aplicación",
-                                    command=lambda: os.system("sudo shutdown -h now"), width=25, height=2,
-                                    anchor='center')
-        shutdown_button.grid(row=1, column=0)
+        # Botón para cerrar la aplicación
+        exit_button = tk.Button(self.frame_exit, text="Cerrar aplicación",
+                                command=self.on_closing, height=2,
+                                anchor='center', bg='#ed6f6f', fg='white')
+        exit_button.grid(row=0, column=0, sticky='ew', columnspan=4)
 
         # Pausar/continuar simulación
         pause_resume_button = tk.Button(self.frame4, text="Pausar/Reanudar simulación",
@@ -108,7 +118,9 @@ class VentanaPreparar:
         self.frame2.grid(row=2, column=1)
         self.frame3.grid(row=2, column=2)
         self.frame4.grid(row=2, column=3)
-        self.sim_frame.grid(row=0, column=4, rowspan=3, sticky='nsew')
+        self.sim_frame.grid(row=0, column=5, rowspan=3, sticky='nsew')
+        self.frame_exit.grid(row=3, column=0, columnspan=4, sticky='nsew')
+        self.frame_exit.columnconfigure(0, weight=1)
 
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
@@ -117,11 +129,9 @@ class VentanaPreparar:
         self.master.title(self.titulo)
 
         self.simular_servos()
-        self.pause_resume_simulation()
-
 
     def insertar_fila(self):
-        self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("0", "0", "0"))
+        self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
         self.actualizar_tiempo_acumulado()
         self.marcar_cambios_no_guardados()
 
@@ -389,7 +399,6 @@ class VentanaPreparar:
                                        frames=len(data),
                                        interval=400,
                                        fargs=(data, fig, self.master.title(), self.tabla, progress, self),
-                                       repeat_delay=3000
                                        )
 
         canvas.draw()
@@ -475,10 +484,10 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     y_2 = -1
 
     # find the end point
-    endy_1 = y_1 + (-1) * np.sin(np.radians(data[i][0]))
-    endx_1 = x_1 + 1 * np.cos(np.radians(data[i][0]))
-    endy_2 = y_2 + 1 * np.sin(np.radians(data[i][1]))
-    endx_2 = x_2 + 1 * np.cos(np.radians(data[i][1]))
+    endy_1 = y_1 + (-1) * np.sin(np.radians(pwm_to_degrees(data[i][0])))
+    endx_1 = x_1 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][0])))
+    endy_2 = y_2 + 1 * np.sin(np.radians(pwm_to_degrees(data[i][1])))
+    endx_2 = x_2 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][1])))
     # Set plot limits
     ax.set_xlim(-2, 2)
     ax.set_ylim(-2, 2)
@@ -495,10 +504,13 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
     servo_1.move(data[i - 1][0])
     servo_2.move(data[i - 1][1])
-    print(f"Moving servo 1 to {data[i - 1][0]} degrees...")
-    print(f"Moving servo 2 to {data[i -1 ][1]} degrees...")
+    table.see(table.get_children()[i -1])
 
     return fig
+
+
+def pwm_to_degrees(pwm):
+    return (pwm - 500) * 180 / (2100 - 500)
 
 #   Backup execute_sequence
 #     def execute_sequence(self):
