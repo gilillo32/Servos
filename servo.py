@@ -3,7 +3,7 @@ import time
 
 class Servo:
     min_angle = 0
-    max_angle = 2500
+    max_angle = 2100
     my_channel = -1
 
     def __init__(self, pin, p_id, channel, pwm, rasp=False):

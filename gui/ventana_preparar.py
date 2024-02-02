@@ -134,6 +134,7 @@ class VentanaPreparar:
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
         self.actualizar_tiempo_acumulado()
         self.marcar_cambios_no_guardados()
+        self.tabla.see(self.tabla.get_children()[-1])
 
     def eliminar_fila(self):
         selected_item = self.tabla.selection()[0]  # get selected item
@@ -314,9 +315,9 @@ class VentanaPreparar:
                 elif which_limit == "max":
                     limit = max_limit
                 if servo_id == 1:
-                    self.simular_servos(p_data=[[limit, 0, 0, 0]])
+                    self.simular_servos(p_data=[[limit, 500, 0, 0]])
                 elif servo_id == 2:
-                    self.simular_servos(p_data=[[0, limit, 0, 0]])
+                    self.simular_servos(p_data=[[0, limit, 500, 0]])
                 curr_servo.move(limit)
                 # Request focus on limits_window
                 limits_window.after(100, lambda: limits_window.focus_force())
@@ -327,7 +328,7 @@ class VentanaPreparar:
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
-        limits_window.geometry("260x300")
+        limits_window.geometry("270x300")
         # Desplegable con la lista de servos
         servo_id_list = []
         servo_list = servo_collection.ServoCollectionSingleton().get_servos()
@@ -341,9 +342,9 @@ class VentanaPreparar:
         min_limit_label.grid(row=1, column=0)
         max_limit_label = tk.Label(limits_window, text="Límite máximo")
         max_limit_label.grid(row=1, column=1)
-        min_limit_entry = tk.Entry(limits_window)
+        min_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=10, command=lambda: test_limit("min"))
         min_limit_entry.grid(row=2, column=0, pady=20)
-        max_limit_entry = tk.Entry(limits_window)
+        max_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=10, command=lambda: test_limit("max"))
         max_limit_entry.grid(row=2, column=1, pady=20)
         # Botón para guardar los límites
         save_button = tk.Button(limits_window, text="Guardar", command=lambda: self.save_limits(servo_combobox,
@@ -421,6 +422,7 @@ class VentanaPreparar:
                                        )
 
         canvas.draw()
+        # plt.close(fig)
 
     def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
         """
@@ -523,7 +525,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
     servo_1.move(data[i - 1][0])
     servo_2.move(data[i - 1][1])
-    table.see(table.get_children()[i -1])
+    table.see(table.get_children()[i - 1])
 
     return fig
 
