@@ -1,6 +1,7 @@
 import csv
 import math
 import os
+import gc
 import pathlib
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -325,6 +326,9 @@ class VentanaPreparar:
             except ValueError:
                 messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
 
+            # Pause simulation
+            self.simulation_paused = True
+
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
@@ -422,7 +426,6 @@ class VentanaPreparar:
                                        )
 
         canvas.draw()
-        # plt.close(fig)
 
     def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
         """
@@ -479,7 +482,14 @@ class VentanaPreparar:
 
 def animate(i, data, fig, title, table, progress, ventana_preparar):
     if ventana_preparar.simulation_paused:
+        plt.close(fig)
+        gc.collect()
         return fig
+    if i == len(data):
+        plt.close(fig)
+        gc.collect()
+        return fig
+
     # Create animation
     ax = plt.subplot(111)
     ax.clear()
