@@ -32,13 +32,13 @@ class VentanaPreparar:
         self.frame4 = tk.Frame(self.master)
         self.frame_exit = tk.Frame(self.master)
         self.sim_frame = tk.Frame(self.master)
-        self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (s)",
-                                                   "Tiempo acumulado (s)"), selectmode="browse", )
+        self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (ms)",
+                                                   "Tiempo acumulado (ms)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
         self.tabla.heading("Servo 1", text="Posición Servo 1", anchor=tk.CENTER)
         self.tabla.heading("Servo 2", text="Posición Servo 2", anchor=tk.CENTER)
-        self.tabla.heading("Tiempo de espera (s)", text="Tiempo de espera (s)", anchor=tk.CENTER)
-        self.tabla.heading("Tiempo acumulado (s)", text="Tiempo acumulado (s)", anchor=tk.CENTER)
+        self.tabla.heading("Tiempo de espera (ms)", text="Tiempo de espera (ms)", anchor=tk.CENTER)
+        self.tabla.heading("Tiempo acumulado (ms)", text="Tiempo acumulado (ms)", anchor=tk.CENTER)
 
         # Style
         style = ttk.Style()
@@ -51,7 +51,7 @@ class VentanaPreparar:
 
         # Centrar la columna Step
         self.tabla.column("#0", anchor=tk.CENTER, width=2)
-        for col in ("Servo 1", "Servo 2", "Tiempo de espera (s)", "Tiempo acumulado (s)"):
+        for col in ("Servo 1", "Servo 2", "Tiempo de espera (ms)", "Tiempo acumulado (ms)"):
             self.tabla.column(col, anchor=tk.CENTER, width=45)
 
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
@@ -90,7 +90,7 @@ class VentanaPreparar:
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular movimiento", command=self.simular_servos, width=25,
+        simular_button = tk.Button(self.frame4, text="Simular/Ejecutar movimiento", command=self.simular_servos, width=25,
                                    height=2,
                                    anchor='center')
         simular_button.grid(row=0, column=0)
@@ -129,6 +129,12 @@ class VentanaPreparar:
         self.titulo = "Nueva secuencia"
         self.master.title(self.titulo)
 
+        self.set_servo_limits_tag(1,
+                                  servo_collection.ServoCollectionSingleton().search_servo_by_id(1).min_limit,
+                                  servo_collection.ServoCollectionSingleton().search_servo_by_id(1).max_limit)
+        self.set_servo_limits_tag(2,
+                                  servo_collection.ServoCollectionSingleton().search_servo_by_id(2).min_limit,
+                                  servo_collection.ServoCollectionSingleton().search_servo_by_id(2).max_limit)
         self.simular_servos()
 
     def insertar_fila(self):
@@ -167,8 +173,8 @@ class VentanaPreparar:
                 writer = csv.writer(file)
 
                 # Escribe los encabezados de las columnas
-                writer.writerow(["Step", "Movimiento Servo 1", "Movimiento Servo 2", "Tiempo de espera (s)",
-                                 "Tiempo acumulado (s)"])
+                writer.writerow(["Step", "Movimiento Servo 1", "Movimiento Servo 2", "Tiempo de espera (ms)",
+                                 "Tiempo acumulado (ms)"])
 
                 # Escribe los datos de cada fila
                 for item in self.tabla.get_children():
@@ -282,6 +288,14 @@ class VentanaPreparar:
                     # Destroy entry
                     entry.destroy()
                     return
+            else:
+                try:
+                    if int(entry.get()) < 0:
+                        raise ValueError
+                except ValueError:
+                    messagebox.showerror("Error", "Debe ingresar un valor numérico positivo y entero")
+                    entry.destroy()
+                    return
             self.tabla.set(item, column, entry.get())
             self.actualizar_tiempo_acumulado()
             self.marcar_cambios_no_guardados()
@@ -298,9 +312,6 @@ class VentanaPreparar:
             if curr_servo is None:
                 messagebox.showerror("Error", f"No se encontró el servo {servo_id}")
                 return
-            if min_limit_entry.get() == -1 and max_limit_entry.get() == -1:
-                messagebox.showerror("Error", f"No se han establecido los límites para el servomotor")
-                return
 
             if min_limit_entry.get() == "" or max_limit_entry.get() == "":
                 messagebox.showerror("Error", f"Debe ingresar un valor para el límite")
@@ -308,8 +319,6 @@ class VentanaPreparar:
             try:
                 min_limit = int(min_limit_entry.get())
                 max_limit = int(max_limit_entry.get())
-                # if min_limit < 0 or min_limit > 180 or max_limit < 0 or max_limit > 180:
-                #     raise ValueError
                 limit = None
                 if which_limit == "min":
                     limit = min_limit
@@ -324,7 +333,7 @@ class VentanaPreparar:
                 limits_window.after(100, lambda: limits_window.focus_force())
 
             except ValueError:
-                messagebox.showerror("Error", f"Los límites deben ser números entre 0 y 180")
+                messagebox.showerror("Error", f"Asegúrese de introducir un valor válido para el límite")
 
             # Pause simulation
             self.simulation_paused = True
@@ -346,9 +355,9 @@ class VentanaPreparar:
         min_limit_label.grid(row=1, column=0)
         max_limit_label = tk.Label(limits_window, text="Límite máximo")
         max_limit_label.grid(row=1, column=1)
-        min_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=10, command=lambda: test_limit("min"))
+        min_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=30, command=lambda: test_limit("min"))
         min_limit_entry.grid(row=2, column=0, pady=20)
-        max_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=10, command=lambda: test_limit("max"))
+        max_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=30, command=lambda: test_limit("max"))
         max_limit_entry.grid(row=2, column=1, pady=20)
         # Botón para guardar los límites
         save_button = tk.Button(limits_window, text="Guardar", command=lambda: self.save_limits(servo_combobox,
@@ -390,16 +399,18 @@ class VentanaPreparar:
             servo.min_limit = min_limit
             servo.max_limit = max_limit
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
-            if servo.id == 1:
-                self.servo_1_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
-            elif servo.id == 2:
-                self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+            self.set_servo_limits_tag(servo_id, min_limit, max_limit)
         except ValueError:
             messagebox.showerror("Error", f"El límite mínimo debe ser inferior al máximo")
 
+    def set_servo_limits_tag(self, servo_id, min_limit, max_limit):
+        if servo_id == 1:
+            self.servo_1_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+        elif servo_id == 2:
+            self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+
     def simular_servos(self, p_data=None):
         self.simulation_paused = False
-        # fig = self.plot_points((0, 0), 0, 1)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
         fig = plt.figure(figsize=(2, 2))
@@ -418,11 +429,14 @@ class VentanaPreparar:
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
         self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
         self.simulation_status_label.pack(side=tk.BOTTOM)
+        parsed_data = self.parse_data_for_animation(data)
+        print(data)
+        print(parsed_data)
         anim = animation.FuncAnimation(fig,
                                        animate,
-                                       frames=len(data),
-                                       interval=400,
-                                       fargs=(data, fig, self.master.title(), self.tabla, progress, self),
+                                       frames=len(parsed_data),
+                                       interval=100,
+                                       fargs=(parsed_data, fig, self.master.title(), self.tabla, progress, self),
                                        )
 
         canvas.draw()
@@ -480,9 +494,36 @@ class VentanaPreparar:
         exit()
 
 
+    def parse_data_for_animation(self, data):
+        """
+        Prepares data for animation by simulating wait times between each step.
+        This function takes a list of data, where each element is a list containing the positions of two servos and a
+        wait time. The wait time is specified in the third column of the data and is in milliseconds.
+        To simulate the wait time, this function duplicates each row in the data. The number of times a row is
+        duplicated is calculated by dividing the wait time by 100, as each frame in the animation is executed every
+        100 ms.
+        For example, if a wait time of 3 seconds is desired, the same frame would need to be repeated 30 times.
+        The function returns a new list of data where each row has been duplicated the necessary number of times to
+         simulate the corresponding wait time.
+
+        Parameters:
+        data (list): A list of lists. Each sublist contains two servo positions and a wait time.
+
+        Returns:
+        parsed_data (list): A new list of data prepared for animation.
+        """
+        parsed_data = []
+        for i, step in enumerate(data):
+            # Calcula cuántas veces se debe duplicar la fila
+            num_repeats = round(step[2] / 100)
+            # Duplica la fila num_repeats veces
+            for _ in range(num_repeats):
+                parsed_data.append([step[0], step[1], step[2], i])
+        return parsed_data
+
+
 def animate(i, data, fig, title, table, progress, ventana_preparar):
     if ventana_preparar.simulation_paused:
-        plt.close(fig)
         gc.collect()
         return fig
     if i == len(data):
@@ -515,7 +556,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     y_2 = -1
 
     # find the end point
-    endy_1 = y_1 + (-1) * np.sin(np.radians(pwm_to_degrees(data[i][0])))
+    endy_1 = y_1 + 1 * np.sin(np.radians(pwm_to_degrees(data[i][0])))
     endx_1 = x_1 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][0])))
     endy_2 = y_2 + 1 * np.sin(np.radians(pwm_to_degrees(data[i][1])))
     endx_2 = x_2 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][1])))
@@ -527,7 +568,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
 
     # Visualize in table
     table.selection_clear()
-    table.selection_set(table.get_children()[i])
+    table.selection_set(table.get_children()[data[i][3]])
     progress['value'] = i + 1
     i += 1
 
@@ -535,7 +576,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
     servo_1.move(data[i - 1][0])
     servo_2.move(data[i - 1][1])
-    table.see(table.get_children()[i - 1])
+    table.see(table.get_children()[data[i - 1][3]])
 
     return fig
 

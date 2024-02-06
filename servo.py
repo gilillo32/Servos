@@ -12,8 +12,8 @@ class Servo:
         self.my_channel = channel
         self.pwm = pwm
         self.sequence = []
-        self.min_limit = -1
-        self.max_limit = -1
+        self.min_limit = 500
+        self.max_limit = 2100
         self.rasp = rasp
 
     def move(self, angle):
