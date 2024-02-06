@@ -50,9 +50,9 @@ class VentanaPreparar:
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Centrar la columna Step
-        self.tabla.column("#0", anchor=tk.CENTER, width=2)
+        self.tabla.column("#0", anchor=tk.CENTER, width=1)
         for col in ("Servo 1", "Servo 2", "Tiempo de espera (ms)", "Tiempo acumulado (ms)"):
-            self.tabla.column(col, anchor=tk.CENTER, width=45)
+            self.tabla.column(col, anchor=tk.CENTER, width=60)
 
         self.texto_acumulado = tk.StringVar(value="Tiempo acumulado: 0")
         lbl_acumulado = tk.Label(master, textvariable=self.texto_acumulado)
@@ -422,8 +422,9 @@ class VentanaPreparar:
             data = p_data
         canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL, length=200, mode='determinate',
-                                   maximum=len(data))
+        progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
+                                   length=len((self.parse_data_for_animation(data))), mode='determinate',
+                                   maximum=len(self.parse_data_for_animation(data)))
         progress.pack(side=tk.BOTTOM, fill=tk.X)
         self.simulation_status = tk.StringVar()
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
@@ -517,7 +518,7 @@ class VentanaPreparar:
             # Calcula cuántas veces se debe duplicar la fila
             num_repeats = round(step[2] / 100)
             # Duplica la fila num_repeats veces
-            for _ in range(num_repeats):
+            for _ in range(num_repeats + 1):
                 parsed_data.append([step[0], step[1], step[2], i])
         return parsed_data
 
