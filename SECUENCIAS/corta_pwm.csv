@@ -1,0 +1,4 @@
+Step,Movimiento Servo 1,Movimiento Servo 2,Tiempo de espera (ms),Tiempo acumulado (ms)
+1,500,500,1000,1000
+2,600,600,3000,4000
+3,700,700,10000,14000

@@ -3,6 +3,7 @@ import math
 import os
 import gc
 import pathlib
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog
 import tkinter.messagebox as messagebox
@@ -90,7 +91,8 @@ class VentanaPreparar:
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular/Ejecutar movimiento", command=self.simular_servos, width=25,
+        simular_button = tk.Button(self.frame4, text="Simular/Ejecutar movimiento", command=self.simular_servos,
+                                   width=25,
                                    height=2,
                                    anchor='center')
         simular_button.grid(row=0, column=0)
@@ -494,7 +496,6 @@ class VentanaPreparar:
         self.master.master.destroy()
         exit()
 
-
     def parse_data_for_animation(self, data):
         """
         Prepares data for animation by simulating wait times between each step.
@@ -518,7 +519,7 @@ class VentanaPreparar:
             # Calcula cuántas veces se debe duplicar la fila
             num_repeats = round(step[2] / 100)
             # Duplica la fila num_repeats veces
-            for _ in range(num_repeats + 1):
+            for _ in range(num_repeats):
                 parsed_data.append([step[0], step[1], step[2], i])
         return parsed_data
 
@@ -580,6 +581,10 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     table.see(table.get_children()[data[i - 1][3]])
 
     return fig
+
+
+def do_nothing():
+    pass
 
 
 def pwm_to_degrees(pwm):
