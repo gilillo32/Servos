@@ -1,8 +1,10 @@
 import csv
 import math
+import copy
 import os
 import gc
 import pathlib
+import threading
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -20,10 +22,15 @@ SEQUENCE_DIR = os.path.join(MAIN_PATH, "SECUENCIAS")
 
 class VentanaPreparar:
     def __init__(self, master):
+        # CONTROL VARIABLES
         self.simulation_status_label = None
         self.simulation_status = None
         self.save_edit_called = None
         self.simulation_paused = False
+        self.stop_simulation = False
+        self.simulation_thread = None
+        self.animation_runs_cont = 0
+
         self.master = master
         self.titulo = "Nueva secuencia"
         self.master.title(self.titulo)
@@ -251,6 +258,12 @@ class VentanaPreparar:
     def pause_resume_simulation(self):
         self.simulation_paused = not self.simulation_paused
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+        if self.simulation_thread.is_alive():
+            self.stop_simulation = True
+        else:
+            self.stop_simulation = False
+            self.simulation_thread = threading.Thread(target=self.start_simulation, daemon=True)
+            self.simulation_thread.start()
 
     def on_double_click(self, event):
         self.save_edit_called = False
@@ -412,7 +425,28 @@ class VentanaPreparar:
             self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
 
     def simular_servos(self, p_data=None):
+        self.animation_runs_cont = 0
+        self.stop_simulation = False
+        self.simulation_thread = threading.Thread(target=self.start_simulation, daemon=True)
+        self.simulation_thread.start()
+
+    def close_simulation(self, new_window):
+        self.stop_simulation = True
+        self.simulation_paused = True
+        self.simulation_thread = None
+        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+        new_window.destroy()
+
+    def start_simulation(self, p_data=None):
         self.simulation_paused = False
+        if self.stop_simulation:
+            return
+        new_window = tk.Tk()
+        # Set closing function
+        new_window.protocol("WM_DELETE_WINDOW", lambda: self.close_simulation(new_window))
+        new_window.title("Simulación")
+        sim_frame = tk.Frame(new_window)
+        sim_frame.pack(fill=tk.BOTH, expand=True)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
         fig = plt.figure(figsize=(2, 2))
@@ -422,7 +456,7 @@ class VentanaPreparar:
             data.append(self.tabla.item(item)["values"])
         if p_data is not None:
             data = p_data
-        canvas = FigureCanvasTkAgg(fig, master=self.sim_frame)
+        canvas = FigureCanvasTkAgg(fig, master=sim_frame)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
                                    length=len((self.parse_data_for_animation(data))), mode='determinate',
@@ -433,16 +467,16 @@ class VentanaPreparar:
         self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
         self.simulation_status_label.pack(side=tk.BOTTOM)
         parsed_data = self.parse_data_for_animation(data)
-        print(data)
-        print(parsed_data)
         anim = animation.FuncAnimation(fig,
                                        animate,
+                                       init_func=lambda: None,
                                        frames=len(parsed_data),
                                        interval=100,
                                        fargs=(parsed_data, fig, self.master.title(), self.tabla, progress, self),
                                        )
 
         canvas.draw()
+        new_window.mainloop()
 
     def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
         """
@@ -497,30 +531,12 @@ class VentanaPreparar:
         exit()
 
     def parse_data_for_animation(self, data):
-        """
-        Prepares data for animation by simulating wait times between each step.
-        This function takes a list of data, where each element is a list containing the positions of two servos and a
-        wait time. The wait time is specified in the third column of the data and is in milliseconds.
-        To simulate the wait time, this function duplicates each row in the data. The number of times a row is
-        duplicated is calculated by dividing the wait time by 100, as each frame in the animation is executed every
-        100 ms.
-        For example, if a wait time of 3 seconds is desired, the same frame would need to be repeated 30 times.
-        The function returns a new list of data where each row has been duplicated the necessary number of times to
-         simulate the corresponding wait time.
-
-        Parameters:
-        data (list): A list of lists. Each sublist contains two servo positions and a wait time.
-
-        Returns:
-        parsed_data (list): A new list of data prepared for animation.
-        """
-        parsed_data = []
-        for i, step in enumerate(data):
-            # Calcula cuántas veces se debe duplicar la fila
-            num_repeats = round(step[2] / 100)
-            # Duplica la fila num_repeats veces
-            for _ in range(num_repeats):
-                parsed_data.append([step[0], step[1], step[2], i])
+        return data
+        # Copy first line of data in the first position
+        parsed_data = copy.deepcopy(data)
+        line_to_copy = copy.deepcopy(data[0])
+        parsed_data.insert(0, line_to_copy)
+        parsed_data[0][2] = 0
         return parsed_data
 
 
@@ -528,12 +544,20 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     if ventana_preparar.simulation_paused:
         gc.collect()
         return fig
-    if i == len(data):
-        plt.close(fig)
-        gc.collect()
-        return fig
+    if i != 0 and ventana_preparar.animation_runs_cont != 0:
+        time.sleep(data[i - 1][2] / 1000)
+    elif i == 0 and ventana_preparar.animation_runs_cont != 0:
+        time.sleep(data[-1][2] / 1000)
 
-    # Create animation
+    if i == 0:
+        ventana_preparar.animation_runs_cont += 1
+    # Move servos
+    servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
+    servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
+    servo_1.move(data[i][0])
+    servo_2.move(data[i][1])
+
+        # Create animation
     ax = plt.subplot(111)
     ax.clear()
     ax.set_aspect('equal')
@@ -570,15 +594,11 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
 
     # Visualize in table
     table.selection_clear()
-    table.selection_set(table.get_children()[data[i][3]])
+    #table.selection_set(table.get_children()[i])
     progress['value'] = i + 1
     i += 1
 
-    servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
-    servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
-    servo_1.move(data[i - 1][0])
-    servo_2.move(data[i - 1][1])
-    table.see(table.get_children()[data[i - 1][3]])
+    #table.see(table.get_children()[i - 1])
 
     return fig
 
