@@ -30,6 +30,7 @@ class VentanaPreparar:
         self.stop_simulation = False
         self.simulation_thread = None
         self.animation_runs_cont = 0
+        self.simulation_window = None
 
         self.master = master
         self.titulo = "Nueva secuencia"
@@ -436,16 +437,19 @@ class VentanaPreparar:
         self.simulation_thread = None
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
         new_window.destroy()
+        self.simulation_window = None
 
     def start_simulation(self, p_data=None):
         self.simulation_paused = False
         if self.stop_simulation:
             return
-        new_window = tk.Tk()
+        if self.simulation_window is not None:
+            self.simulation_window.after(0, self.simulation_window.destroy)
+        self.simulation_window = tk.Tk()
+        self.simulation_window.overrideredirect(True)
         # Set closing function
-        new_window.protocol("WM_DELETE_WINDOW", lambda: self.close_simulation(new_window))
-        new_window.title("Simulación")
-        sim_frame = tk.Frame(new_window)
+        self.simulation_window.title("Simulación")
+        sim_frame = tk.Frame(self.simulation_window)
         sim_frame.pack(fill=tk.BOTH, expand=True)
         for widget in self.sim_frame.winfo_children():
             widget.destroy()
@@ -476,7 +480,7 @@ class VentanaPreparar:
                                        )
 
         canvas.draw()
-        new_window.mainloop()
+        self.simulation_window.mainloop()
 
     def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
         """
