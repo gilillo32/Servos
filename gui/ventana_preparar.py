@@ -22,15 +22,15 @@ SEQUENCE_DIR = os.path.join(MAIN_PATH, "SECUENCIAS")
 
 class VentanaPreparar:
     def __init__(self, master):
+
         # CONTROL VARIABLES
         self.simulation_status_label = None
         self.simulation_status = None
         self.save_edit_called = None
         self.simulation_paused = False
         self.stop_simulation = False
-        self.simulation_thread = None
+        self.movement_thread = None
         self.animation_runs_cont = 0
-        self.simulation_window = None
 
         self.master = master
         self.titulo = "Nueva secuencia"
@@ -258,13 +258,15 @@ class VentanaPreparar:
 
     def pause_resume_simulation(self):
         self.simulation_paused = not self.simulation_paused
+        for widget in self.sim_frame.winfo_children():
+            widget.destroy()
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
-        if self.simulation_thread.is_alive():
+        if self.movement_thread.is_alive():
             self.stop_simulation = True
         else:
             self.stop_simulation = False
-            self.simulation_thread = threading.Thread(target=self.start_simulation, daemon=True)
-            self.simulation_thread.start()
+            self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
+            self.movement_thread.start()
 
     def on_double_click(self, event):
         self.save_edit_called = False
@@ -428,31 +430,19 @@ class VentanaPreparar:
     def simular_servos(self, p_data=None):
         self.animation_runs_cont = 0
         self.stop_simulation = False
-        self.simulation_thread = threading.Thread(target=self.start_simulation, daemon=True)
-        self.simulation_thread.start()
+        self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
+        self.movement_thread.start()
 
-    def close_simulation(self, new_window):
+    def close_simulation(self):
         self.stop_simulation = True
         self.simulation_paused = True
-        self.simulation_thread = None
+        self.movement_thread = None
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
-        new_window.destroy()
-        self.simulation_window = None
 
     def start_simulation(self, p_data=None):
         self.simulation_paused = False
         if self.stop_simulation:
             return
-        if self.simulation_window is not None:
-            self.simulation_window.after(0, self.simulation_window.destroy)
-        self.simulation_window = tk.Tk()
-        self.simulation_window.overrideredirect(True)
-        # Set closing function
-        self.simulation_window.title("Simulación")
-        sim_frame = tk.Frame(self.simulation_window)
-        sim_frame.pack(fill=tk.BOTH, expand=True)
-        for widget in self.sim_frame.winfo_children():
-            widget.destroy()
         fig = plt.figure(figsize=(2, 2))
         # Read data from the table
         data = []
@@ -460,70 +450,19 @@ class VentanaPreparar:
             data.append(self.tabla.item(item)["values"])
         if p_data is not None:
             data = p_data
-        canvas = FigureCanvasTkAgg(fig, master=sim_frame)
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
-                                   length=len((self.parse_data_for_animation(data))), mode='determinate',
-                                   maximum=len(self.parse_data_for_animation(data)))
+                                   length=len(data), mode='determinate',
+                                   maximum=len(data))
         progress.pack(side=tk.BOTTOM, fill=tk.X)
         self.simulation_status = tk.StringVar()
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
         self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
         self.simulation_status_label.pack(side=tk.BOTTOM)
-        parsed_data = self.parse_data_for_animation(data)
-        anim = animation.FuncAnimation(fig,
-                                       animate,
-                                       init_func=lambda: None,
-                                       frames=len(parsed_data),
-                                       interval=100,
-                                       fargs=(parsed_data, fig, self.master.title(), self.tabla, progress, self),
-                                       )
+        parsed_data = data
+        self.movement_thread = threading.Thread(target=animate, args=(0, parsed_data, None, self.master.title(),
+                                                                      self.tabla, progress, self), daemon=True)
+        self.movement_thread.start()
 
-        canvas.draw()
-        self.simulation_window.mainloop()
-
-    def plot_points(self, point_1, angle_1, point_2, angle_2, length=1):
-        """
-        point - Tuple (x, y)
-        angle - Angle you want your end point at in degrees.
-        length - Length of the line you want to plot.
-
-        Will plot the line on a 10 x 10 plot.
-        """
-
-        # unpack the first point
-        x_1, y_1 = point_1
-        x_2, y_2 = point_2
-
-        # find the end point
-        endy_1 = y_1 + length * math.sin(math.degrees(angle_1))
-        endx_1 = x_1 + length * math.cos(math.degrees(angle_1))
-
-        endy_2 = y_2 + length * math.sin(math.degrees(angle_2))
-        endx_2 = x_2 + length * math.cos(math.degrees(angle_2))
-
-        # plot the points
-        fig = plt.figure()
-        ax = plt.axes(xlim=(-1, 1), ylim=(-1, 1))
-        ax.set_aspect('equal')
-        # Set window title same as window title
-        ax.set_title(self.master.title())
-        ax.grid(False)
-        ax.set_xticks(np.arange(-1, 1.1, 0.1))
-        ax.set_yticks(np.arange(-1, 1.1, 0.1))
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_facecolor("black")
-        ax.spines['bottom'].set_color('white')
-        ax.spines['top'].set_color('white')
-        ax.spines['right'].set_color('white')
-        ax.spines['left'].set_color('white')
-        ax.tick_params(axis='x', colors='white')
-        ax.tick_params(axis='y', colors='white')
-        ax = plt.subplot(111)
-        ax.plot([x_1, endx_1], [y_1, endy_1])
-
-        return fig
 
     def on_closing(self):
         if self.master.title().endswith("*"):
@@ -534,77 +473,33 @@ class VentanaPreparar:
         self.master.master.destroy()
         exit()
 
-    def parse_data_for_animation(self, data):
-        return data
-        # Copy first line of data in the first position
-        parsed_data = copy.deepcopy(data)
-        line_to_copy = copy.deepcopy(data[0])
-        parsed_data.insert(0, line_to_copy)
-        parsed_data[0][2] = 0
-        return parsed_data
-
 
 def animate(i, data, fig, title, table, progress, ventana_preparar):
-    if ventana_preparar.simulation_paused:
-        gc.collect()
-        return fig
-    if i != 0 and ventana_preparar.animation_runs_cont != 0:
-        time.sleep(data[i - 1][2] / 1000)
-    elif i == 0 and ventana_preparar.animation_runs_cont != 0:
-        time.sleep(data[-1][2] / 1000)
+    while True:
+        if ventana_preparar.stop_simulation:
+            break
+        if i != 0 and ventana_preparar.animation_runs_cont != 0:
+            time.sleep(data[i - 1][2] / 1000)
+        elif i == 0 and ventana_preparar.animation_runs_cont != 0:
+            time.sleep(data[-1][2] / 1000)
 
-    if i == 0:
-        ventana_preparar.animation_runs_cont += 1
-    # Move servos
-    servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
-    servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
-    servo_1.move(data[i][0])
-    servo_2.move(data[i][1])
+        if i == 0:
+            ventana_preparar.animation_runs_cont += 1
+        # Move servos
+        servo_1 = servo_collection.ServoCollectionSingleton().search_servo_by_id(1)
+        servo_2 = servo_collection.ServoCollectionSingleton().search_servo_by_id(2)
+        servo_1.move(data[i][0])
+        servo_2.move(data[i][1])
 
-        # Create animation
-    ax = plt.subplot(111)
-    ax.clear()
-    ax.set_aspect('equal')
-    ax.set_title(title)
-    ax.grid(False)
-    ax.set_xticks(np.arange(-1, 1.1, 0.1))
-    ax.set_yticks(np.arange(-1, 1.1, 0.1))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_facecolor("black")
-    ax.spines['bottom'].set_color('white')
-    ax.spines['top'].set_color('white')
-    ax.spines['right'].set_color('white')
-    ax.spines['left'].set_color('white')
-    ax.tick_params(axis='x', colors='white')
-    ax.tick_params(axis='y', colors='white')
-    ax = plt.subplot(111)
-    # unpack the first point
-    x_1 = 0
-    y_1 = 0
-    x_2 = 0
-    y_2 = -1
+        # Visualize in table
+        table.selection_clear()
+        table.selection_set(table.get_children()[i])
+        progress['value'] = i + 1
+        i += 1
 
-    # find the end point
-    endy_1 = y_1 + 1 * np.sin(np.radians(pwm_to_degrees(data[i][0])))
-    endx_1 = x_1 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][0])))
-    endy_2 = y_2 + 1 * np.sin(np.radians(pwm_to_degrees(data[i][1])))
-    endx_2 = x_2 + 1 * np.cos(np.radians(pwm_to_degrees(data[i][1])))
-    # Set plot limits
-    ax.set_xlim(-2, 2)
-    ax.set_ylim(-2, 2)
-    ax.plot([x_1, endx_1], [y_1, endy_1], color="red")
-    ax.plot([x_2, endx_2], [y_2, endy_2], color="blue")
-
-    # Visualize in table
-    table.selection_clear()
-    #table.selection_set(table.get_children()[i])
-    progress['value'] = i + 1
-    i += 1
-
-    #table.see(table.get_children()[i - 1])
-
-    return fig
+        table.see(table.get_children()[i - 1])
+        if i == len(data):
+            i = 0
 
 
 def do_nothing():
