@@ -26,6 +26,7 @@ class VentanaPreparar:
         # CONTROL VARIABLES
         self.simulation_status_label = None
         self.simulation_status = None
+        self.progress = None
         self.save_edit_called = None
         self.simulation_paused = False
         self.stop_simulation = False
@@ -145,7 +146,7 @@ class VentanaPreparar:
         self.set_servo_limits_tag(2,
                                   servo_collection.ServoCollectionSingleton().search_servo_by_id(2).min_limit,
                                   servo_collection.ServoCollectionSingleton().search_servo_by_id(2).max_limit)
-        self.simular_servos()
+        # self.simular_servos()
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
@@ -258,11 +259,11 @@ class VentanaPreparar:
 
     def pause_resume_simulation(self):
         self.simulation_paused = not self.simulation_paused
-        for widget in self.sim_frame.winfo_children():
-            widget.destroy()
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+        self.simulation_status_label.update()
         if self.movement_thread.is_alive():
             self.stop_simulation = True
+            print("\nStopping movement. . .\n")
         else:
             self.stop_simulation = False
             self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
@@ -342,10 +343,6 @@ class VentanaPreparar:
                     limit = min_limit
                 elif which_limit == "max":
                     limit = max_limit
-                if servo_id == 1:
-                    self.simular_servos(p_data=[[limit, 500, 0, 0]])
-                elif servo_id == 2:
-                    self.simular_servos(p_data=[[0, limit, 500, 0]])
                 curr_servo.move(limit)
                 # Request focus on limits_window
                 limits_window.after(100, lambda: limits_window.focus_force())
@@ -429,8 +426,12 @@ class VentanaPreparar:
 
     def simular_servos(self, p_data=None):
         self.animation_runs_cont = 0
-        self.stop_simulation = False
-        self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
+        self.stop_simulation = True
+        if self.movement_thread is not None and self.movement_thread.is_alive():
+            self.stop_simulation = True
+            self.simulation_paused = True
+            self.movement_thread = None
+        self.movement_thread = threading.Thread(target=self.start_simulation, daemon=False)
         self.movement_thread.start()
 
     def close_simulation(self):
@@ -438,11 +439,13 @@ class VentanaPreparar:
         self.simulation_paused = True
         self.movement_thread = None
         self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+        self.simulation_status_label.update()
 
     def start_simulation(self, p_data=None):
         self.simulation_paused = False
+        self.stop_simulation = False
         if self.stop_simulation:
-            return
+            self.close_simulation()
         fig = plt.figure(figsize=(2, 2))
         # Read data from the table
         data = []
@@ -450,19 +453,21 @@ class VentanaPreparar:
             data.append(self.tabla.item(item)["values"])
         if p_data is not None:
             data = p_data
-        progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
-                                   length=len(data), mode='determinate',
-                                   maximum=len(data))
-        progress.pack(side=tk.BOTTOM, fill=tk.X)
-        self.simulation_status = tk.StringVar()
-        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
-        self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
-        self.simulation_status_label.pack(side=tk.BOTTOM)
-        parsed_data = data
-        self.movement_thread = threading.Thread(target=animate, args=(0, parsed_data, None, self.master.title(),
-                                                                      self.tabla, progress, self), daemon=True)
-        self.movement_thread.start()
 
+        if self.progress is None:
+            self.progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
+                                       length=len(data), mode='determinate',
+                                       maximum=len(data))
+            self.progress.pack(side=tk.BOTTOM, fill=tk.X)
+        if self.simulation_status is None:
+            # Initialize simulation status label
+            self.simulation_status = tk.StringVar()
+            self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+            self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
+            self.simulation_status_label.pack(side=tk.BOTTOM)
+        parsed_data = data
+        # TODO progress is now a common variable, it should not be passed as an argument
+        animate(0, parsed_data, None, self.master.title(), self.tabla, self.progress, self)
 
     def on_closing(self):
         if self.master.title().endswith("*"):
@@ -476,8 +481,11 @@ class VentanaPreparar:
 
 def animate(i, data, fig, title, table, progress, ventana_preparar):
     while True:
+        # Check if program is creating more than 2 threads
+        print("Thread count:", threading.active_count())
         if ventana_preparar.stop_simulation:
-            break
+            print("\nMovement stopped\n")
+            return
         if i != 0 and ventana_preparar.animation_runs_cont != 0:
             time.sleep(data[i - 1][2] / 1000)
         elif i == 0 and ventana_preparar.animation_runs_cont != 0:
@@ -500,11 +508,6 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
         table.see(table.get_children()[i - 1])
         if i == len(data):
             i = 0
-
-
-def do_nothing():
-    pass
-
 
 def pwm_to_degrees(pwm):
     return (pwm - 500) * 180 / (2100 - 500)
