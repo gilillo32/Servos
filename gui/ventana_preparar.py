@@ -1,8 +1,5 @@
 import csv
-import math
-import copy
 import os
-import gc
 import pathlib
 import threading
 import time
@@ -10,9 +7,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import tkinter.messagebox as messagebox
 import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import animation
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image, ImageTk
 
 import servo_collection
 
@@ -113,7 +108,7 @@ class VentanaPreparar:
         exit_button.grid(row=0, column=0, sticky='ew', columnspan=4)
 
         # Pausar/continuar simulación
-        pause_resume_button = tk.Button(self.frame4, text="Pausar/Reanudar simulación",
+        pause_resume_button = tk.Button(self.frame4, text="Pausar/Reanudar movimiento",
                                         command=self.pause_resume_simulation, width=25, height=2, anchor='center')
         pause_resume_button.grid(row=2, column=0)
 
@@ -130,9 +125,26 @@ class VentanaPreparar:
         self.frame2.grid(row=2, column=1)
         self.frame3.grid(row=2, column=2)
         self.frame4.grid(row=2, column=3)
-        self.sim_frame.grid(row=0, column=5, rowspan=3, sticky='nsew')
+        self.sim_frame.grid(row=0, column=5, rowspan=3, sticky='nsew', padx=20)
         self.frame_exit.grid(row=3, column=0, columnspan=4, sticky='nsew')
         self.frame_exit.columnconfigure(0, weight=1)
+
+        self.moving_img = Image.open(os.path.join(MAIN_PATH, "resources", "moving.png"))
+        self.paused_img = Image.open(os.path.join(MAIN_PATH, "resources", "paused.png"))
+
+        new_size = (100, 100)
+
+        self.moving_img = self.moving_img.resize(new_size)
+        self.paused_img = self.paused_img.resize(new_size)
+
+        self.moving_img = ImageTk.PhotoImage(self.moving_img)
+        self.paused_img = ImageTk.PhotoImage(self.paused_img)
+
+        self.simulation_status_img_label = tk.Label(self.sim_frame, image=self.paused_img)
+
+        estado_label = tk.Label(self.sim_frame, text="Estado del\n movimiento", font=("Helvetica", 12, "bold"))
+        estado_label.pack(side=tk.TOP)
+        self.simulation_status_img_label.pack(side=tk.TOP, pady=50)
 
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
@@ -146,7 +158,9 @@ class VentanaPreparar:
         self.set_servo_limits_tag(2,
                                   servo_collection.ServoCollectionSingleton().search_servo_by_id(2).min_limit,
                                   servo_collection.ServoCollectionSingleton().search_servo_by_id(2).max_limit)
-        # self.simular_servos()
+        # Load servo limits from file
+        self.load_servo_limits()
+
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
@@ -168,7 +182,7 @@ class VentanaPreparar:
         for item in self.tabla.get_children():
             total += self.tabla.item(item)["values"][2]
             self.tabla.set(item, "#4", total)
-        self.texto_acumulado.set(f"Tiempo total de la secuencia: {total}s")
+        self.texto_acumulado.set(f"Tiempo total de la secuencia: {total}ms")
 
     # Exportar secuencia en formato csv dando la opción de elegir el nombre del archivo y la ubicación
     def exportar_secuencia(self):
@@ -259,15 +273,26 @@ class VentanaPreparar:
 
     def pause_resume_simulation(self):
         self.simulation_paused = not self.simulation_paused
-        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
-        self.simulation_status_label.update()
+        if self.simulation_status is None:
+            self.simulation_status = tk.StringVar()
+            self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
+            self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
+            self.simulation_status_label.pack(side=tk.BOTTOM)
+        else:
+            self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
+            self.simulation_status_label.update()
+        # Clear table selection
         if self.movement_thread.is_alive():
             self.stop_simulation = True
             print("\nStopping movement. . .\n")
+            self.simulation_status.set("Pausando movimiento. . . Espere por favor")
+            self.simulation_status_label.update()
+            # Close movement thread
         else:
             self.stop_simulation = False
             self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
             self.movement_thread.start()
+        self.tabla.selection_remove(self.tabla.selection())
 
     def on_double_click(self, event):
         self.save_edit_called = False
@@ -356,7 +381,7 @@ class VentanaPreparar:
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
         limits_window.title("Límites de los servos")
-        limits_window.geometry("270x300")
+        limits_window.geometry("600x300")
         # Desplegable con la lista de servos
         servo_id_list = []
         servo_list = servo_collection.ServoCollectionSingleton().get_servos()
@@ -426,11 +451,12 @@ class VentanaPreparar:
 
     def simular_servos(self, p_data=None):
         self.animation_runs_cont = 0
-        self.stop_simulation = True
+        self.stop_simulation = False
         if self.movement_thread is not None and self.movement_thread.is_alive():
-            self.stop_simulation = True
-            self.simulation_paused = True
-            self.movement_thread = None
+            # Show error message
+            messagebox.showerror("Error", "Ya hay una secuencia en ejecución, páusela antes de ejecutar"
+                                          " otra secuencia")
+            return
         self.movement_thread = threading.Thread(target=self.start_simulation, daemon=False)
         self.movement_thread.start()
 
@@ -438,8 +464,11 @@ class VentanaPreparar:
         self.stop_simulation = True
         self.simulation_paused = True
         self.movement_thread = None
-        self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
-        self.simulation_status_label.update()
+        if self.simulation_status is not None:
+            self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
+            self.simulation_status_label.update()
+        # Clear table selection
+        self.tabla.selection_remove(self.tabla.selection())
 
     def start_simulation(self, p_data=None):
         self.simulation_paused = False
@@ -456,20 +485,24 @@ class VentanaPreparar:
 
         if self.progress is None:
             self.progress = ttk.Progressbar(self.sim_frame, orient=tk.HORIZONTAL,
-                                       length=len(data), mode='determinate',
-                                       maximum=len(data))
+                                            length=len(data), mode='determinate',
+                                            maximum=len(data))
             self.progress.pack(side=tk.BOTTOM, fill=tk.X)
         if self.simulation_status is None:
             # Initialize simulation status label
             self.simulation_status = tk.StringVar()
-            self.simulation_status.set("Simulación en pausa" if self.simulation_paused else "Simulación en ejecución")
+            self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
             self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
             self.simulation_status_label.pack(side=tk.BOTTOM)
+        else:
+            self.simulation_status.set("Movimiento en ejecución")
+            self.simulation_status_label.update()
         parsed_data = data
         # TODO progress is now a common variable, it should not be passed as an argument
         animate(0, parsed_data, None, self.master.title(), self.tabla, self.progress, self)
 
     def on_closing(self):
+        self.export_servo_limits()
         if self.master.title().endswith("*"):
             if messagebox.askyesno("Guardar cambios",
                                    "Hay cambios sin guardar. ¿Desea guardarlos antes de salir?"):
@@ -478,6 +511,36 @@ class VentanaPreparar:
         self.master.master.destroy()
         exit()
 
+    def load_servo_limits(self):
+        print("Loading servo limits. . .")
+        try:
+            with open(os.path.join(MAIN_PATH, "servo_limits"), "r") as file:
+                lines = file.readlines()
+                for line in lines:
+                    servo_id, min_limit, max_limit = line.split(",")
+                    servo_id = int(servo_id)
+                    min_limit = int(min_limit)
+                    max_limit = int(max_limit)
+                    servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
+                    if servo is None:
+                        messagebox.showerror("Error", f"No se encontró el servo {servo_id}.")
+                        return
+                    servo.min_limit = min_limit
+                    servo.max_limit = max_limit
+                    self.set_servo_limits_tag(servo_id, min_limit, max_limit)
+        except FileNotFoundError:
+            messagebox.showwarning("Advertencia", "No se encontró el archivo servo_limits. Se cargarán "
+                                                  "los límites por defecto (500 - 2100)")
+        except ValueError:
+            messagebox.showerror("Error", "El archivo servo_limits está corrupto. Se cargarán los "
+                                          "límites por defecto (500 - 2100)")
+
+    def export_servo_limits(self):
+        print("Exporting servo limits. . .")
+        with open(os.path.join(MAIN_PATH, "servo_limits"), "w") as file:
+            for servo in servo_collection.ServoCollectionSingleton().get_servos():
+                file.write(f"{servo.id},{servo.min_limit},{servo.max_limit}\n")
+
 
 def animate(i, data, fig, title, table, progress, ventana_preparar):
     while True:
@@ -485,6 +548,8 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
         print("Thread count:", threading.active_count())
         if ventana_preparar.stop_simulation:
             print("\nMovement stopped\n")
+            ventana_preparar.simulation_status.set("Movimiento en pausa")
+            ventana_preparar.simulation_status_label.update()
             return
         if i != 0 and ventana_preparar.animation_runs_cont != 0:
             time.sleep(data[i - 1][2] / 1000)
@@ -508,6 +573,7 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
         table.see(table.get_children()[i - 1])
         if i == len(data):
             i = 0
+
 
 def pwm_to_degrees(pwm):
     return (pwm - 500) * 180 / (2100 - 500)
