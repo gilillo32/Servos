@@ -20,6 +20,6 @@ class Servo:
         if angle < self.min_angle or angle > self.max_angle:
             raise ValueError(f"El ángulo debe estar entre {self.min_angle} y {self.max_angle}")
         else:
-            print("Moving servo " + str(self.id) + " to position: " + str(angle))
+            print("[INFO] Moving servo " + str(self.id) + " to position: " + str(angle))
             if self.rasp:
                 self.pwm.set_pulse_width(self.my_channel, angle)

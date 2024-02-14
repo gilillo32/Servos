@@ -95,7 +95,7 @@ class VentanaPreparar:
         limits_button.grid(row=0, column=0)
 
         # Botón para simular los servos
-        simular_button = tk.Button(self.frame4, text="Simular/Ejecutar movimiento", command=self.simular_servos,
+        simular_button = tk.Button(self.frame4, text="Ejecutar movimiento", command=self.simular_servos,
                                    width=25,
                                    height=2,
                                    anchor='center')
@@ -131,20 +131,28 @@ class VentanaPreparar:
 
         self.moving_img = Image.open(os.path.join(MAIN_PATH, "resources", "moving.png"))
         self.paused_img = Image.open(os.path.join(MAIN_PATH, "resources", "paused.png"))
+        self.loading_img = Image.open(os.path.join(MAIN_PATH, "resources", "loading.png"))
 
         new_size = (100, 100)
 
         self.moving_img = self.moving_img.resize(new_size)
         self.paused_img = self.paused_img.resize(new_size)
+        self.loading_img = self.loading_img.resize(new_size)
 
         self.moving_img = ImageTk.PhotoImage(self.moving_img)
         self.paused_img = ImageTk.PhotoImage(self.paused_img)
+        self.loading_img = ImageTk.PhotoImage(self.loading_img)
 
         self.simulation_status_img_label = tk.Label(self.sim_frame, image=self.paused_img)
+        self.simulation_status = tk.StringVar()
+        self.simulation_status.set("Movimiento en pausa")
+        self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
+        self.simulation_status_label.pack(side=tk.BOTTOM)
+        self.simulation_status_label.update()
 
         estado_label = tk.Label(self.sim_frame, text="Estado del\n movimiento", font=("Helvetica", 12, "bold"))
-        estado_label.pack(side=tk.TOP)
-        self.simulation_status_img_label.pack(side=tk.TOP, pady=50)
+        estado_label.pack(side=tk.TOP, pady=(80, 0))
+        self.simulation_status_img_label.pack(side=tk.TOP)
 
         # Evento de doble clic para editar celdas
         self.tabla.bind("<Double-1>", self.on_double_click)
@@ -160,7 +168,6 @@ class VentanaPreparar:
                                   servo_collection.ServoCollectionSingleton().search_servo_by_id(2).max_limit)
         # Load servo limits from file
         self.load_servo_limits()
-
 
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
@@ -211,6 +218,12 @@ class VentanaPreparar:
             self.master.title(self.titulo)
 
     def cargar_secuencia(self):
+        # Check if sequence is running
+        if self.movement_thread is not None and self.movement_thread.is_alive():
+            # Show error message
+            messagebox.showerror("Error", "Ya hay una secuencia en ejecución, páusela antes de cargar"
+                                          " otra secuencia")
+            return
         # Guardar el estado actual de la tabla
         filas_guardadas = [(self.tabla.item(item)["text"], self.tabla.item(item)["values"]) for item in
                            self.tabla.get_children()]
@@ -284,10 +297,10 @@ class VentanaPreparar:
         # Clear table selection
         if self.movement_thread.is_alive():
             self.stop_simulation = True
-            print("\nStopping movement. . .\n")
+            print("\n[INFO] Stopping movement. . .\n")
             self.simulation_status.set("Pausando movimiento. . . Espere por favor")
             self.simulation_status_label.update()
-            # Close movement thread
+            self.simulation_status_img_label.configure(image=self.loading_img)
         else:
             self.stop_simulation = False
             self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
@@ -388,28 +401,28 @@ class VentanaPreparar:
         for servo in servo_list:
             servo_id_list.append("Servo " + str(servo.id))
         servo_combobox = ttk.Combobox(limits_window, values=servo_id_list)
-        servo_combobox.grid(row=0, column=0, columnspan=2, pady=20)
+        servo_combobox.grid(row=0, column=0, columnspan=2, pady=20, padx=20)
         if servo_id_list:
             servo_combobox.set(servo_id_list[0])
         min_limit_label = tk.Label(limits_window, text="Límite mínimo")
-        min_limit_label.grid(row=1, column=0)
+        min_limit_label.grid(row=1, column=0, padx=20)
         max_limit_label = tk.Label(limits_window, text="Límite máximo")
-        max_limit_label.grid(row=1, column=1)
+        max_limit_label.grid(row=1, column=1, padx=20)
         min_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=30, command=lambda: test_limit("min"))
-        min_limit_entry.grid(row=2, column=0, pady=20)
+        min_limit_entry.grid(row=2, column=0, pady=20, padx=20)
         max_limit_entry = tk.Spinbox(limits_window, from_=500, to=2100, increment=30, command=lambda: test_limit("max"))
-        max_limit_entry.grid(row=2, column=1, pady=20)
+        max_limit_entry.grid(row=2, column=1, pady=20, padx=20)
         # Botón para guardar los límites
         save_button = tk.Button(limits_window, text="Guardar", command=lambda: self.save_limits(servo_combobox,
                                                                                                 min_limit_entry,
                                                                                                 max_limit_entry))
-        save_button.grid(row=3, column=0, columnspan=2)
+        save_button.grid(row=3, column=0, columnspan=2, padx=20)
 
         # Botón para probar los límites
         min_limit_button = tk.Button(limits_window, text="Probar límite mínimo", command=lambda: test_limit("min"))
-        min_limit_button.grid(row=4, column=0, pady=20)
+        min_limit_button.grid(row=4, column=0, pady=20, padx=20)
         max_limit_button = tk.Button(limits_window, text="Probar límite máximo", command=lambda: test_limit("max"))
-        max_limit_button.grid(row=4, column=1, pady=20)
+        max_limit_button.grid(row=4, column=1, pady=20, padx=20)
 
         def on_servo_selected(event):
             current_servo_id = int(servo_combobox.get().split(" ")[1])
@@ -467,6 +480,8 @@ class VentanaPreparar:
         if self.simulation_status is not None:
             self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
             self.simulation_status_label.update()
+            self.simulation_status_img_label.configure(image=self.paused_img if self.simulation_paused else self.
+                                                       moving_img)
         # Clear table selection
         self.tabla.selection_remove(self.tabla.selection())
 
@@ -494,9 +509,13 @@ class VentanaPreparar:
             self.simulation_status.set("Movimiento en pausa" if self.simulation_paused else "Movimiento en ejecución")
             self.simulation_status_label = tk.Label(self.sim_frame, textvariable=self.simulation_status)
             self.simulation_status_label.pack(side=tk.BOTTOM)
+            self.simulation_status_img_label.configure(image=self.paused_img if self.simulation_paused else self.
+                                                       moving_img)
         else:
             self.simulation_status.set("Movimiento en ejecución")
             self.simulation_status_label.update()
+            self.simulation_status_img_label.configure(image=self.paused_img if self.simulation_paused else self.
+                                                       moving_img)
         parsed_data = data
         # TODO progress is now a common variable, it should not be passed as an argument
         animate(0, parsed_data, None, self.master.title(), self.tabla, self.progress, self)
@@ -512,7 +531,7 @@ class VentanaPreparar:
         exit()
 
     def load_servo_limits(self):
-        print("Loading servo limits. . .")
+        print("[INFO] Loading servo limits. . .")
         try:
             with open(os.path.join(MAIN_PATH, "servo_limits"), "r") as file:
                 lines = file.readlines()
@@ -536,7 +555,7 @@ class VentanaPreparar:
                                           "límites por defecto (500 - 2100)")
 
     def export_servo_limits(self):
-        print("Exporting servo limits. . .")
+        print("[INFO] Exporting servo limits. . .")
         with open(os.path.join(MAIN_PATH, "servo_limits"), "w") as file:
             for servo in servo_collection.ServoCollectionSingleton().get_servos():
                 file.write(f"{servo.id},{servo.min_limit},{servo.max_limit}\n")
@@ -545,11 +564,13 @@ class VentanaPreparar:
 def animate(i, data, fig, title, table, progress, ventana_preparar):
     while True:
         # Check if program is creating more than 2 threads
-        print("Thread count:", threading.active_count())
         if ventana_preparar.stop_simulation:
-            print("\nMovement stopped\n")
+            print("\n[INFO] Movement stopped\n")
             ventana_preparar.simulation_status.set("Movimiento en pausa")
             ventana_preparar.simulation_status_label.update()
+            ventana_preparar.simulation_status_img_label.configure(image=ventana_preparar.
+                                                                   paused_img if ventana_preparar.
+                                                                   simulation_paused else ventana_preparar.moving_img)
             return
         if i != 0 and ventana_preparar.animation_runs_cont != 0:
             time.sleep(data[i - 1][2] / 1000)
