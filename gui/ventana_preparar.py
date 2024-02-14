@@ -169,6 +169,11 @@ class VentanaPreparar:
         # Load servo limits from file
         self.load_servo_limits()
 
+        # Check current sequence values
+        if not self.table_values_valid():
+            messagebox.showwarning("Advertencia", "Hay ángulos de la secuencia que están fuera de los límites "
+                                                  "actuales de los servos")
+
     def insertar_fila(self):
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
         self.actualizar_tiempo_acumulado()
@@ -451,6 +456,15 @@ class VentanaPreparar:
                 raise ValueError
             servo.min_limit = min_limit
             servo.max_limit = max_limit
+            # Check current sequence values
+            for item in self.tabla.get_children():
+                servo_1_angle = int(self.tabla.item(item)["values"][0])
+                servo_2_angle = int(self.tabla.item(item)["values"][1])
+                if servo_1_angle < min_limit or servo_1_angle > max_limit or servo_2_angle < min_limit or \
+                        servo_2_angle > max_limit:
+                    messagebox.showwarning("Advertencia", f"Hay ángulos de la secuencia que están fuera "
+                                                          f"de los" f" límites"f" actuales del servo {servo_id}")
+                    break
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
             self.set_servo_limits_tag(servo_id, min_limit, max_limit)
         except ValueError:
@@ -462,7 +476,30 @@ class VentanaPreparar:
         elif servo_id == 2:
             self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
 
+    def table_values_valid(self, servo=None):
+        if servo is None:
+            for item in self.tabla.get_children():
+                servo_1_angle = int(self.tabla.item(item)["values"][0])
+                servo_2_angle = int(self.tabla.item(item)["values"][1])
+                if servo_1_angle < servo_collection.ServoCollectionSingleton().search_servo_by_id(1).min_limit or \
+                        servo_1_angle > servo_collection.ServoCollectionSingleton().search_servo_by_id(1).max_limit or \
+                        servo_2_angle < servo_collection.ServoCollectionSingleton().search_servo_by_id(2).min_limit or \
+                        servo_2_angle > servo_collection.ServoCollectionSingleton().search_servo_by_id(2).max_limit:
+                    return False
+            return True
+        else:
+            for item in self.tabla.get_children():
+                servo_angle = int(self.tabla.item(item)["values"][servo.id - 1])
+                if servo_angle < servo.min_limit or servo_angle > servo.max_limit:
+                    return False
+            return True
+
     def simular_servos(self, p_data=None):
+        # Check table values
+        if not self.table_values_valid():
+            messagebox.showerror("Error", "Hay ángulos de la secuencia que están fuera de los límites "
+                                          "actuales de los servos")
+            return
         self.animation_runs_cont = 0
         self.stop_simulation = False
         if self.movement_thread is not None and self.movement_thread.is_alive():
