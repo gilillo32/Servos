@@ -558,6 +558,12 @@ class VentanaPreparar:
         animate(0, parsed_data, None, self.master.title(), self.tabla, self.progress, self)
 
     def on_closing(self):
+        # Check if sequence is executing
+        if self.movement_thread is not None and self.movement_thread.is_alive():
+            # Show error message
+            messagebox.showerror("Error", "No se puede cerrar la aplicación mientras haya una secuencia "
+                                          "en ejecución")
+            return
         self.export_servo_limits()
         if self.master.title().endswith("*"):
             if messagebox.askyesno("Guardar cambios",
