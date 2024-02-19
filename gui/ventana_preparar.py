@@ -175,12 +175,20 @@ class VentanaPreparar:
                                                   "actuales de los servos")
 
     def insertar_fila(self):
+        """"
+        Inserts a new row in the table
+        :return: None
+        """
         self.tabla.insert("", tk.END, text=str(len(self.tabla.get_children()) + 1), values=("500", "500", "0"))
         self.actualizar_tiempo_acumulado()
         self.marcar_cambios_no_guardados()
         self.tabla.see(self.tabla.get_children()[-1])
 
     def eliminar_fila(self):
+        """"
+        Deletes the selected row in the table
+        :return: None
+        """
         selected_item = self.tabla.selection()[0]  # get selected item
         self.tabla.delete(selected_item)
         # Actualizar los números de step
@@ -190,6 +198,10 @@ class VentanaPreparar:
         self.marcar_cambios_no_guardados()
 
     def actualizar_tiempo_acumulado(self):
+        """
+        Refreshes the total time of the sequence and updates the last column of the table
+        :return: None
+        """
         total = 0
         for item in self.tabla.get_children():
             total += self.tabla.item(item)["values"][2]
@@ -198,6 +210,10 @@ class VentanaPreparar:
 
     # Exportar secuencia en formato csv dando la opción de elegir el nombre del archivo y la ubicación
     def exportar_secuencia(self):
+        """
+        Saves the sequence in a csv file. The file must be saved in the SECUENCIAS folder
+        :return: None
+        """
         # Abre el diálogo para guardar el archivo
         file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")],
                                                  initialdir=SEQUENCE_DIR)
@@ -223,6 +239,10 @@ class VentanaPreparar:
             self.master.title(self.titulo)
 
     def cargar_secuencia(self):
+        """
+        Loads a sequence from a csv file
+        :return: None
+        """
         # Check if sequence is running
         if self.movement_thread is not None and self.movement_thread.is_alive():
             # Show error message
@@ -285,11 +305,19 @@ class VentanaPreparar:
             messagebox.showerror("Error", f"Archivo no válido")
 
     def marcar_cambios_no_guardados(self):
+        """
+        Marks the window title with an asterisk to indicate that there are unsaved changes
+        :return: None
+        """
         if not self.titulo.endswith("*"):
             self.titulo += "*"
             self.master.title(self.titulo)
 
     def pause_resume_simulation(self):
+        """
+        Pauses or resumes the movement of the servos
+        :return: None
+        """
         self.simulation_paused = not self.simulation_paused
         if self.simulation_status is None:
             self.simulation_status = tk.StringVar()
@@ -313,6 +341,11 @@ class VentanaPreparar:
         self.tabla.selection_remove(self.tabla.selection())
 
     def on_double_click(self, event):
+        """
+        Event handler for double click event on table cells. Opens an entry to edit the cell value
+        :param event: Event information (X and Y coordinates)
+        :return: None
+        """
         self.save_edit_called = False
         item = self.tabla.identify('item', event.x, event.y)
         column = self.tabla.identify('column', event.x, event.y)
@@ -327,6 +360,11 @@ class VentanaPreparar:
         entry.place(x=event.x, y=event.y, anchor=tk.CENTER)
 
         def save_edit(event=None):
+            """
+            Event handler for saving the edited cell value
+            :param event: Not used
+            :return: None
+            """
             if self.save_edit_called:
                 return
             self.save_edit_called = True
@@ -574,6 +612,10 @@ class VentanaPreparar:
         exit()
 
     def load_servo_limits(self):
+        """
+        Loads servo limits from file, if file does not exist, default limits are loaded (500 - 2100)
+        :return: None
+        """
         print("[INFO] Loading servo limits. . .")
         try:
             with open(os.path.join(MAIN_PATH, "servo_limits"), "r") as file:
