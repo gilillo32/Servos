@@ -406,7 +406,16 @@ class VentanaPreparar:
         entry.focus_set()
 
     def set_limits(self):
+        """
+        Opens a window to set the limits of the servos
+        :return: None
+        """
         def test_limit(which_limit):
+            """
+            Tests the limits of the selected servo. Moves the servo to the limit
+            :param which_limit: Min or max limit
+            :return: None
+            """
             servo_id = int(servo_combobox.get().split(" ")[1])
             curr_servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
             if curr_servo is None:
@@ -468,6 +477,11 @@ class VentanaPreparar:
         max_limit_button.grid(row=4, column=1, pady=20, padx=20)
 
         def on_servo_selected(event):
+            """
+            Event handler for servo selection
+            :param event: None
+            :return: None
+            """
             current_servo_id = int(servo_combobox.get().split(" ")[1])
             current_servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(current_servo_id)
             if current_servo is None:
@@ -482,6 +496,13 @@ class VentanaPreparar:
         servo_combobox.bind("<<ComboboxSelected>>", on_servo_selected)
 
     def save_limits(self, servo_combobox, min_limit_entry, max_limit_entry):
+        """
+        Saves the limits of the selected servo
+        :param servo_combobox: Combobox object
+        :param min_limit_entry: Entry object
+        :param max_limit_entry: Entry object
+        :return: None
+        """
         servo_id = int(servo_combobox.get().split(" ")[1])
         servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
         if servo is None:
@@ -509,12 +530,24 @@ class VentanaPreparar:
             messagebox.showerror("Error", f"El límite mínimo debe ser inferior al máximo")
 
     def set_servo_limits_tag(self, servo_id, min_limit, max_limit):
+        """
+        Sets the servo limits tag
+        :param servo_id:
+        :param min_limit:
+        :param max_limit:
+        :return: None
+        """
         if servo_id == 1:
             self.servo_1_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
         elif servo_id == 2:
             self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
 
     def table_values_valid(self, servo=None):
+        """
+        Checks if the values in the table are valid (inside the limits of the servos)
+        :param servo: Servo to check
+        :return: True if valid, False otherwise
+        """
         if servo is None:
             for item in self.tabla.get_children():
                 servo_1_angle = int(self.tabla.item(item)["values"][0])
@@ -533,6 +566,11 @@ class VentanaPreparar:
             return True
 
     def simular_servos(self, p_data=None):
+        """
+        Starts the movement of the servos
+        :param p_data: None
+        :return: None
+        """
         # Check table values
         if not self.table_values_valid():
             messagebox.showerror("Error", "Hay ángulos de la secuencia que están fuera de los límites "
@@ -549,6 +587,10 @@ class VentanaPreparar:
         self.movement_thread.start()
 
     def close_simulation(self):
+        """
+        Stops the simulation of the servos
+        :return: None
+        """
         self.stop_simulation = True
         self.simulation_paused = True
         self.movement_thread = None
@@ -561,6 +603,11 @@ class VentanaPreparar:
         self.tabla.selection_remove(self.tabla.selection())
 
     def start_simulation(self, p_data=None):
+        """
+        Starts the simulation of the servos
+        :param p_data: Table data
+        :return: None
+        """
         self.simulation_paused = False
         self.stop_simulation = False
         if self.stop_simulation:
@@ -640,6 +687,10 @@ class VentanaPreparar:
                                           "límites por defecto (500 - 2100)")
 
     def export_servo_limits(self):
+        """
+        Saves servo limits to file
+        :return: None
+        """
         print("[INFO] Exporting servo limits. . .")
         with open(os.path.join(MAIN_PATH, "servo_limits"), "w") as file:
             for servo in servo_collection.ServoCollectionSingleton().get_servos():
@@ -647,6 +698,17 @@ class VentanaPreparar:
 
 
 def animate(i, data, fig, title, table, progress, ventana_preparar):
+    """"
+    Animates the movement of the servos
+    :param i: Current step
+    :param data: Sequence data
+    :param fig: Figure to plot
+    :param title: Title of the window
+    :param table: Table widget
+    :param progress: Progress bar
+    :param ventana_preparar: VentanaPreparar instance
+    :return: None
+    """
     while True:
         # Check if program is creating more than 2 threads
         if ventana_preparar.stop_simulation:
@@ -682,6 +744,11 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
 
 
 def pwm_to_degrees(pwm):
+    """
+    Converts a PWM value to degrees assuming 500 as 0 degrees and 2100 as 180 degrees
+    :param pwm: The PWM value to convert. It must be in the range 500 - 2100
+    :return: Corresponding angle in degrees
+    """
     return (pwm - 500) * 180 / (2100 - 500)
 
 #   Backup execute_sequence
