@@ -15,10 +15,11 @@ class Servo:
         self.min_limit = 500
         self.max_limit = 2100
         self.rasp = rasp
+        self.description = "Labio inf." if p_id == 1 else "Labio sup." if p_id == 2 else "Otro"
 
     def move(self, angle):
         if angle < self.min_angle or angle > self.max_angle:
-            raise ValueError(f"El ángulo debe estar entre {self.min_angle} y {self.max_angle}")
+            raise ValueError(f"El valor debe estar entre {self.min_angle} y {self.max_angle}")
         else:
             print("[INFO] Moving servo " + str(self.id) + " to position: " + str(angle))
             if self.rasp:

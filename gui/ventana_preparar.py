@@ -40,8 +40,8 @@ class VentanaPreparar:
         self.tabla = ttk.Treeview(master, columns=("Servo 1", "Servo 2", "Tiempo de espera (ms)",
                                                    "Tiempo acumulado (ms)"), selectmode="browse", )
         self.tabla.heading("#0", text="Step", anchor=tk.CENTER)
-        self.tabla.heading("Servo 1", text="Posición Servo 1", anchor=tk.CENTER)
-        self.tabla.heading("Servo 2", text="Posición Servo 2", anchor=tk.CENTER)
+        self.tabla.heading("Servo 1", text="Posicón labio inf.", anchor=tk.CENTER)
+        self.tabla.heading("Servo 2", text="Posición labio sup.", anchor=tk.CENTER)
         self.tabla.heading("Tiempo de espera (ms)", text="Tiempo de espera (ms)", anchor=tk.CENTER)
         self.tabla.heading("Tiempo acumulado (ms)", text="Tiempo acumulado (ms)", anchor=tk.CENTER)
 
@@ -171,8 +171,8 @@ class VentanaPreparar:
 
         # Check current sequence values
         if not self.table_values_valid():
-            messagebox.showwarning("Advertencia", "Hay ángulos de la secuencia que están fuera de los límites "
-                                                  "actuales de los servos")
+            messagebox.showwarning("Advertencia", "Hay casillas de la secuencia que están fuera de los límites "
+                                                  "actuales de los labios")
 
     def insertar_fila(self):
         """"
@@ -226,7 +226,7 @@ class VentanaPreparar:
                 writer = csv.writer(file)
 
                 # Escribe los encabezados de las columnas
-                writer.writerow(["Step", "Movimiento Servo 1", "Movimiento Servo 2", "Tiempo de espera (ms)",
+                writer.writerow(["Step", "Movimiento labio inf.", "Movimiento labio sup.", "Tiempo de espera (ms)",
                                  "Tiempo acumulado (ms)"])
 
                 # Escribe los datos de cada fila
@@ -294,7 +294,8 @@ class VentanaPreparar:
             for fila in filas_guardadas:
                 self.tabla.insert("", tk.END, text=fila[0], values=fila[1])
             self.actualizar_tiempo_acumulado()
-            messagebox.showerror("Error", f"El archivo contiene ángulos fuera de los límites de los servos")
+            messagebox.showerror("Error", f"El archivo contiene valores fuera de los límites de los "
+                                          f"labios")
         except Exception as e:
             # Restaurar el estado de la tabla
             for item in self.tabla.get_children():
@@ -334,6 +335,7 @@ class VentanaPreparar:
             self.simulation_status.set("Pausando movimiento. . . Espere por favor")
             self.simulation_status_label.update()
             self.simulation_status_img_label.configure(image=self.loading_img)
+            self.simulation_status_img_label.update()
         else:
             self.stop_simulation = False
             self.movement_thread = threading.Thread(target=self.start_simulation, daemon=True)
@@ -381,10 +383,10 @@ class VentanaPreparar:
                         raise ValueError
                 except ValueError:
                     if servo.min_limit == -1 and servo.max_limit == -1:
-                        messagebox.showerror("Error", f"No se han establecido los límites para el servomotor")
+                        messagebox.showerror("Error", f"No se han establecido los límites para el labio")
                     else:
                         messagebox.showerror("Error",
-                                             f"El ángulo debe estar entre {servo.min_limit} y {servo.max_limit}")
+                                             f"El paso debe estar entre {servo.min_limit} y {servo.max_limit}")
                     # Destroy entry
                     entry.destroy()
                     return
@@ -416,7 +418,7 @@ class VentanaPreparar:
             :param which_limit: Min or max limit
             :return: None
             """
-            servo_id = int(servo_combobox.get().split(" ")[1])
+            servo_id = int(servo_combobox.get().split(" ")[3])
             curr_servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
             if curr_servo is None:
                 messagebox.showerror("Error", f"No se encontró el servo {servo_id}")
@@ -445,13 +447,14 @@ class VentanaPreparar:
 
         # Open window to set servo motor limits
         limits_window = tk.Toplevel(self.master)
-        limits_window.title("Límites de los servos")
+        limits_window.title("Límites de los labios")
         limits_window.geometry("600x300")
         # Desplegable con la lista de servos
         servo_id_list = []
         servo_list = servo_collection.ServoCollectionSingleton().get_servos()
         for servo in servo_list:
-            servo_id_list.append("Servo " + str(servo.id))
+            # Labio inf if servo.id == 1 else "Labio sup"
+            servo_id_list.append(f"Labio inf. ID: {servo.id}" if servo.id == 1 else f"Labio sup. ID: {servo.id}")
         servo_combobox = ttk.Combobox(limits_window, values=servo_id_list)
         servo_combobox.grid(row=0, column=0, columnspan=2, pady=20, padx=20)
         if servo_id_list:
@@ -482,7 +485,7 @@ class VentanaPreparar:
             :param event: None
             :return: None
             """
-            current_servo_id = int(servo_combobox.get().split(" ")[1])
+            current_servo_id = int(servo_combobox.get().split(" ")[3])
             current_servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(current_servo_id)
             if current_servo is None:
                 messagebox.showerror("Error", f"No se encontró el servo {current_servo_id}")
@@ -503,7 +506,7 @@ class VentanaPreparar:
         :param max_limit_entry: Entry object
         :return: None
         """
-        servo_id = int(servo_combobox.get().split(" ")[1])
+        servo_id = int(servo_combobox.get().split(" ")[3])
         servo = servo_collection.ServoCollectionSingleton().search_servo_by_id(servo_id)
         if servo is None:
             messagebox.showerror("Error", f"No se encontró el servo {servo_id}")
@@ -521,8 +524,9 @@ class VentanaPreparar:
                 servo_2_angle = int(self.tabla.item(item)["values"][1])
                 if servo_1_angle < min_limit or servo_1_angle > max_limit or servo_2_angle < min_limit or \
                         servo_2_angle > max_limit:
-                    messagebox.showwarning("Advertencia", f"Hay ángulos de la secuencia que están fuera "
-                                                          f"de los" f" límites"f" actuales del servo {servo_id}")
+                    messagebox.showwarning("Advertencia", f"Hay valores de la secuencia que están fuera "
+                                                          f"de los" f" límites"f" actuales del servo {servo_id}"
+                                                          f" ({servo.description})")
                     break
             messagebox.showinfo("Información", f"Límites del servo {servo_id} guardados correctamente")
             self.set_servo_limits_tag(servo_id, min_limit, max_limit)
@@ -538,9 +542,9 @@ class VentanaPreparar:
         :return: None
         """
         if servo_id == 1:
-            self.servo_1_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+            self.servo_1_limits_tag.set(f"Límites del labio inferior (ID: {servo_id}): {min_limit} - {max_limit}")
         elif servo_id == 2:
-            self.servo_2_limits_tag.set(f"Límites del servo {servo_id}: {min_limit} - {max_limit}")
+            self.servo_2_limits_tag.set(f"Límites del labio superior (ID: {servo_id}): {min_limit} - {max_limit}")
 
     def table_values_valid(self, servo=None):
         """
@@ -573,8 +577,8 @@ class VentanaPreparar:
         """
         # Check table values
         if not self.table_values_valid():
-            messagebox.showerror("Error", "Hay ángulos de la secuencia que están fuera de los límites "
-                                          "actuales de los servos")
+            messagebox.showerror("Error", "Hay casillas de la secuencia que están fuera de los límites "
+                                          "actuales de los labios")
             return
         self.animation_runs_cont = 0
         self.stop_simulation = False
@@ -599,6 +603,7 @@ class VentanaPreparar:
             self.simulation_status_label.update()
             self.simulation_status_img_label.configure(image=self.paused_img if self.simulation_paused else self.
                                                        moving_img)
+        self.simulation_status_img_label.update()
         # Clear table selection
         self.tabla.selection_remove(self.tabla.selection())
 
@@ -710,14 +715,12 @@ def animate(i, data, fig, title, table, progress, ventana_preparar):
     :return: None
     """
     while True:
-        # Check if program is creating more than 2 threads
         if ventana_preparar.stop_simulation:
             print("\n[INFO] Movement stopped\n")
             ventana_preparar.simulation_status.set("Movimiento en pausa")
             ventana_preparar.simulation_status_label.update()
-            ventana_preparar.simulation_status_img_label.configure(image=ventana_preparar.
-                                                                   paused_img if ventana_preparar.
-                                                                   simulation_paused else ventana_preparar.moving_img)
+            ventana_preparar.simulation_status_img_label.configure(image=ventana_preparar.paused_img)
+            ventana_preparar.simulation_status_img_label.update()
             return
         if i != 0 and ventana_preparar.animation_runs_cont != 0:
             time.sleep(data[i - 1][2] / 1000)
